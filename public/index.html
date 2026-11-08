@@ -1,14 +1,31 @@
 <!doctype html>
 <html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#17152b"><title>International 3D Cartoon Video Maker</title>
 <style>
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(145deg,#17152b,#202b46);color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:20px}.app{width:min(100%,520px);text-align:center}.logo{font-size:52px}.app h1{font-size:clamp(26px,7vw,36px);margin:8px 0}.sub{color:#c8c9dc;line-height:1.6}textarea{width:100%;min-height:125px;padding:15px;border-radius:15px;border:1px solid #ffffff35;background:#11182b;color:white;font:inherit;font-size:16px;resize:vertical;margin-top:22px}textarea::placeholder{color:#aeb4ce}.go{width:100%;border:0;border-radius:15px;padding:18px;background:linear-gradient(145deg,#ffd36c,#ffad28);color:#211805;font-size:20px;font-weight:850;margin:14px 0}.status{min-height:48px;color:#ffe3ad;line-height:1.5}.note{margin-top:18px;padding:14px;border:1px solid #ffffff25;border-radius:14px;color:#c8c9dc;font-size:13px;line-height:1.6}
-</style></head><body><main class="app"><div class="logo">🎬🌍</div><h1>International 3D Cartoon Video Maker</h1><p class="sub">अपनी बात लिखें या मोबाइल कीबोर्ड के माइक से बोलें। ChatGPT कहानी और सीन तैयार करेगा।</p>
-<textarea id="request" placeholder="उदाहरण: YouTube के लिए 5 मिनट की मजेदार 3D कार्टून कहानी बनाकर MP4 वीडियो दो।"></textarea>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(145deg,#17152b,#202b46);color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:20px}.app{width:min(100%,520px);text-align:center}.logo{font-size:52px}.app h1{font-size:clamp(26px,7vw,36px);margin:8px 0}.sub{color:#c8c9dc;line-height:1.6}textarea{width:100%;min-height:125px;padding:15px;border-radius:15px;border:1px solid #ffffff35;background:#11182b;color:white;font:inherit;font-size:16px;resize:vertical;margin-top:22px}textarea::placeholder{color:#aeb4ce}.go{width:100%;border:0;border-radius:15px;padding:18px;background:linear-gradient(145deg,#ffd36c,#ffad28);color:#211805;font-size:20px;font-weight:850;margin:14px 0}.go:disabled{opacity:.65}.status{min-height:48px;color:#ffe3ad;line-height:1.5}.note{margin-top:18px;padding:14px;border:1px solid #ffffff25;border-radius:14px;color:#c8c9dc;font-size:13px;line-height:1.6}video{width:100%;margin-top:16px;border-radius:14px;background:#000}a{color:#ffd36c}
+</style></head><body><main class="app"><div class="logo">🎬🌍</div><h1>International 3D Cartoon Video Maker</h1><p class="sub">अपनी कार्टून वीडियो का दृश्य लिखें। मोबाइल कीबोर्ड के माइक से बोल भी सकते हैं।</p>
+<textarea id="request" placeholder="उदाहरण: एक प्यारा 3D कार्टून बच्चा रंग-बिरंगे जंगल में तितलियों के पीछे दौड़ रहा है, सिनेमैटिक कैमरा, बच्चों वाली कहानी।"></textarea>
 <button class="go" id="make">✨ AI से मेरी कार्टून वीडियो बनाओ</button>
-<p class="status" id="status">लिखकर या कीबोर्ड के माइक से बोलकर बटन दबाएँ।</p>
-<div class="note">ChatGPT आपकी मांग से कहानी, किरदार, डायलॉग और सीन के निर्देश तैयार कर सकता है। अभी इस ऐप में AI वीडियो बनाना, सभी सीन जोड़ना और MP4 डाउनलोड करना जुड़ा नहीं है। ChatGPT खुलने पर Send दबाना होगा।</div>
+<p class="status" id="status">एक दृश्य लिखें और बटन दबाएँ।</p>
+<div id="output"></div>
+<div class="note">पहला मुफ़्त इंजन टेक्स्ट से लगभग 5 सेकंड की एक 3D वीडियो क्लिप बनाता है। यह अभी पूरी कहानी, बोलती आवाज़, होंठों की लिप-सिंक, कई सीन जोड़ना या 5 मिनट की MP4 फ़िल्म नहीं बनाता। इंजन सार्वजनिक साझा GPU पर चलता है—कभी इंतज़ार या असफलता हो सकती है।</div>
 </main>
 <script>
-const request=document.getElementById("request"),status=document.getElementById("status");
-document.getElementById("make").addEventListener("click",()=>{const idea=request.value.trim()||"मेरे YouTube चैनल के लिए 5 मिनट की शानदार, मौलिक 3D कार्टून कहानी खुद सोचकर बनाओ।";const prompt="तुम मेरी 3D कार्टून वीडियो के लेखक और निर्देशक हो। मेरी मांग: "+idea+"\n\nपहले पूरी मौलिक कहानी, मुख्य किरदारों का एक-जैसा रूप, हिंदी डायलॉग और क्रमवार सभी सीन के विस्तृत 3D animation prompts तैयार करो। कहानी बच्चों और परिवार के लिए उपयुक्त हो। सरल हिंदी में जवाब दो।";status.textContent="ChatGPT खुल रहा है…";location.href="https://chatgpt.com/?q="+encodeURIComponent(prompt);});
+const request=document.getElementById("request");
+const status=document.getElementById("status");
+const button=document.getElementById("make");
+const output=document.getElementById("output");
+button.addEventListener("click", async ()=>{
+  const prompt=request.value.trim();
+  if(!prompt){status.textContent="पहले वीडियो का दृश्य लिखें या माइक से बोलें।";request.focus();return;}
+  button.disabled=true;output.innerHTML="";status.textContent="AI इंजन वीडियो बना रहा है। इसमें कुछ मिनट लग सकते हैं…";
+  try{
+    const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||"वीडियो नहीं बन पाई।");
+    const video=document.createElement("video");video.controls=true;video.playsInline=true;video.src=data.videoUrl;
+    const link=document.createElement("a");link.href=data.videoUrl;link.target="_blank";link.rel="noopener";link.textContent="वीडियो खोलें / डाउनलोड करें";
+    output.append(video,document.createElement("br"),link);status.textContent="वीडियो क्लिप तैयार है!";
+  }catch(error){status.textContent=error.message||"कुछ गड़बड़ हुई। फिर कोशिश करें।";}
+  finally{button.disabled=false;}
+});
 </script></body></html>
