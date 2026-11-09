@@ -66,7 +66,9 @@ app.post("/api/generate", async (req, res) => {
     }
 
     if (engineError) {
-      console.error("HF generation event error:", engineError.slice(0, 500));
+      const errorBlock = raw.split(/\r?\n\r?\n/).find(block => /^event:\s*error/m.test(block)) || "";
+      console.error("HF generation event error; raw SSE block:", errorBlock.slice(0, 1800));
+      console.error("HF generation event error data:", engineError.slice(0, 500));
       return res.status(502).json({ error: "मुफ़्त AI इंजन इस समय वीडियो नहीं बना पाया। यह साझा GPU की व्यस्तता या इंजन की अस्थायी समस्या हो सकती है।" });
     }
     if (!completedData) {
