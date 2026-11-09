@@ -37,7 +37,8 @@
 </main>
 <script>
 const photoInput=document.getElementById("photo"),photoPreview=document.getElementById("photoPreview");let selectedPhoto=null;
-document.getElementById("pickPhoto").addEventListener("click",()=>photoInput.click());\nphotoInput.addEventListener("change",()=>{const file=photoInput.files?.[0];if(!file){selectedPhoto=null;photoPreview.style.display="none";return;}if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>6*1024*1024){alert("JPG, PNG या WEBP तस्वीर चुनें। आकार 6 MB से कम होना चाहिए।");photoInput.value="";return;}selectedPhoto=file;photoPreview.src=URL.createObjectURL(file);photoPreview.style.display="block";});
+document.getElementById("pickPhoto").addEventListener("click",()=>photoInput.click());
+photoInput.addEventListener("change",()=>{const file=photoInput.files?.[0];if(!file){selectedPhoto=null;photoPreview.style.display="none";return;}if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>6*1024*1024){alert("JPG, PNG या WEBP तस्वीर चुनें। आकार 6 MB से कम होना चाहिए।");photoInput.value="";return;}selectedPhoto=file;photoPreview.src=URL.createObjectURL(file);photoPreview.style.display="block";});
 const request=document.getElementById("request"),status=document.getElementById("status"),button=document.getElementById("make"),output=document.getElementById("output");
 const duration=document.getElementById("duration"),hint=document.getElementById("formatHint"),shortMode=document.getElementById("shortMode"),longMode=document.getElementById("longMode");
 let mode="shorts";
