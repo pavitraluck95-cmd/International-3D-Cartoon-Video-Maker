@@ -3,15 +3,18 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
 
+const publicRoot = resolve(process.cwd(), "public");
 export default defineConfig({
+  root: publicRoot,
+  publicDir: false,
   plugins: [react(), tailwindcss()],
   build: {
-    outDir: "dist",
+    outDir: resolve(process.cwd(), "dist"),
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: resolve(process.cwd(), "public/index.html"),
-        editor: resolve(process.cwd(), "public/editor.html")
+        main: resolve(publicRoot, "index.html"),
+        editor: resolve(publicRoot, "editor.html")
       }
     }
   }
