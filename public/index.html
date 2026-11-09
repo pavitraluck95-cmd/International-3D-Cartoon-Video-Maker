@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#17152b">
 <title>International 3D Cartoon Video Maker</title>
 <style>
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(145deg,#17152b,#202b46);color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:18px}.app{width:min(100%,560px);margin:0 auto}.head{text-align:center}.logo{font-size:48px}.app h1{font-size:clamp(25px,7vw,34px);margin:6px 0}.sub{color:#c8c9dc;line-height:1.55;margin:8px 0 20px}.panel{background:#ffffff0c;border:1px solid #ffffff25;border-radius:18px;padding:16px;margin:14px 0}.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mode{border:1px solid #ffffff38;border-radius:14px;background:#11182b;color:#fff;padding:14px 8px;font:inherit;text-align:center}.mode.active{border:2px solid #ffd36c;background:#3b3021}.mode b{display:block;font-size:16px}.mode small{color:#c8c9dc}.field{display:block;text-align:left;font-weight:700;margin:14px 0 7px}select,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid #ffffff35;background:#11182b;color:#fff;font:inherit;font-size:16px}textarea{min-height:120px;resize:vertical}option{background:#11182b}.hint{color:#c8c9dc;font-size:13px;line-height:1.5;margin:7px 0}.go{width:100%;border:0;border-radius:14px;padding:17px;background:linear-gradient(145deg,#ffd36c,#ffad28);color:#211805;font-size:19px;font-weight:850;margin:14px 0}.go:disabled{opacity:.6}.status{min-height:42px;color:#ffe3ad;line-height:1.5;text-align:center}video{width:100%;margin-top:14px;border-radius:14px;background:#000}a{color:#ffd36c}.notice{background:#352c1e;border:1px solid #8b6c35;border-radius:13px;padding:12px;color:#ffe5b2;font-size:13px;line-height:1.55}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(145deg,#17152b,#202b46);color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:18px}.app{width:min(100%,560px);margin:0 auto}.head{text-align:center}.logo{font-size:48px}.app h1{font-size:clamp(25px,7vw,34px);margin:6px 0}.sub{color:#c8c9dc;line-height:1.55;margin:8px 0 20px}.panel{background:#ffffff0c;border:1px solid #ffffff25;border-radius:18px;padding:16px;margin:14px 0}.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mode{border:1px solid #ffffff38;border-radius:14px;background:#11182b;color:#fff;padding:14px 8px;font:inherit;text-align:center}.mode.active{border:2px solid #ffd36c;background:#3b3021}.mode b{display:block;font-size:16px}.mode small{color:#c8c9dc}.field{display:block;text-align:left;font-weight:700;margin:14px 0 7px}select,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid #ffffff35;background:#11182b;color:#fff;font:inherit;font-size:16px}textarea{min-height:120px;resize:vertical}option{background:#11182b}.hint{color:#c8c9dc;font-size:13px;line-height:1.5;margin:7px 0}.go{width:100%;border:0;border-radius:14px;padding:17px;background:linear-gradient(145deg,#ffd36c,#ffad28);color:#211805;font-size:19px;font-weight:850;margin:14px 0}.go:disabled{opacity:.6}.status{min-height:42px;color:#ffe3ad;line-height:1.5;text-align:center}video{width:100%;margin-top:14px;border-radius:14px;background:#000}a{color:#ffd36c}.photo-preview{display:none;width:100%;max-height:260px;object-fit:contain;border-radius:12px;margin-top:10px;background:#101426}.pick{display:block;width:100%;padding:14px;border:1px dashed #ffd36c;border-radius:12px;background:#171c31;color:#fff;font:inherit;text-align:center}.notice{background:#352c1e;border:1px solid #8b6c35;border-radius:13px;padding:12px;color:#ffe5b2;font-size:13px;line-height:1.55}
 </style></head>
 <body><main class="app">
 <header class="head"><div class="logo">🎬🌍</div><h1>International 3D Cartoon Video Maker</h1><p class="sub">अपनी कहानी लिखें या मोबाइल के माइक से बोलें। वीडियो का प्रकार और लंबाई आप खुद चुनें।</p></header>
@@ -20,9 +20,15 @@
 <select id="quality"><option value="720">720p HD</option><option value="1080" selected>1080p Full HD (लक्ष्य)</option></select>
 </section>
 <section class="panel">
+<label class="field" for="photo">🖼️ तस्वीर चुनें (नई सुविधा)</label>
+<input id="photo" type="file" accept="image/jpeg,image/png,image/webp" style="position:absolute;left:-9999px;width:1px;height:1px">
+<button type="button" class="pick" id="pickPhoto">📷 मोबाइल से तस्वीर चुनें</button>
+<img id="photoPreview" class="photo-preview" alt="चुनी हुई तस्वीर का प्रीव्यू">
+<p class="hint">JPG, PNG या WEBP · अधिकतम 6 MB। तस्वीर से लगभग 2 सेकंड की छोटी चलती क्लिप बनाने का प्रयास होगा।</p>
 <label class="field" for="request">कार्टून कहानी / दृश्य का विवरण</label>
 <textarea id="request" placeholder="उदाहरण: एक प्यारा 3D कार्टून बच्चा रंग-बिरंगे जंगल में तितलियों के पीछे दौड़ रहा है। कहानी मजेदार हो और चेहरे के भाव स्पष्ट हों।"></textarea>
 <button class="go" id="make">✨ AI से कार्टून वीडियो बनाओ</button>
+<button type="button" class="go" id="animatePhoto" style="background:linear-gradient(145deg,#8bd4ff,#4d9fe0);color:#071a2a">🖼️ चुनी तस्वीर को वीडियो बनाओ</button>
 <button type="button" id="dreamina" style="width:100%;border:1px solid #8bd4ff;border-radius:14px;padding:15px;background:#17334a;color:#e8f6ff;font:inherit;font-weight:800">🎬 Dreamina में कहानी बनाओ (बाहरी वेबसाइट)</button>
 <p class="hint">यह बटन आपकी कहानी कॉपी करके Dreamina खोलता है। वीडियो Dreamina में बनेगा, इस ऐप के अंदर सीधे नहीं।</p>
 <p class="status" id="status">रोज़ का लक्ष्य: 1 लंबा वीडियो और 5 Shorts।</p><div id="output"></div>
@@ -30,7 +36,7 @@
 <div class="notice"><b>विकास की स्थिति:</b> अभी जुड़ा हुआ मुफ़्त AI इंजन केवल छोटी टेस्ट क्लिप बनाता है। चुनी हुई पूरी अवधि, कई सीन जोड़ना, संवाद/आवाज़ और सही Lip-sync अभी तैयार नहीं हैं। 1080p भी अभी लक्ष्य सेटिंग है, गारंटी नहीं। इन्हें जोड़ने के लिए अलग-अलग मुफ्त AI सुविधाओं की जाँच और इंटीग्रेशन बाकी है।</div>
 </main>
 <script>
-const request=document.getElementById("request"),status=document.getElementById("status"),button=document.getElementById("make"),output=document.getElementById("output");
+const photoInput=document.getElementById("photo"),photoPreview=document.getElementById("photoPreview");let selectedPhoto=null;\ndocument.getElementById("pickPhoto").addEventListener("click",()=>photoInput.click());\nphotoInput.addEventListener("change",()=>{const file=photoInput.files?.[0];if(!file){selectedPhoto=null;photoPreview.style.display="none";return;}if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>6*1024*1024){alert("JPG, PNG या WEBP तस्वीर चुनें। आकार 6 MB से कम होना चाहिए।");photoInput.value="";return;}selectedPhoto=file;photoPreview.src=URL.createObjectURL(file);photoPreview.style.display="block";});\nconst request=document.getElementById("request"),status=document.getElementById("status"),button=document.getElementById("make"),output=document.getElementById("output");
 const duration=document.getElementById("duration"),hint=document.getElementById("formatHint"),shortMode=document.getElementById("shortMode"),longMode=document.getElementById("longMode");
 let mode="shorts";
 function fillDurations(){duration.innerHTML="";const values=mode==="shorts"?[30]:[300,360,480,600,900,1200,1800,3600,7200,21600,43200];for(const s of values){const o=document.createElement("option");o.value=s;o.textContent=s<60?s+" सेकंड":(s%60===0?(s/60)+" मिनट":Math.floor(s/60)+" मिनट "+s%60+" सेकंड");if(s===(mode==="shorts"?30:300))o.selected=true;duration.append(o)}hint.textContent=mode==="shorts"?"रोज़ का लक्ष्य: 5 Shorts · हर एक 30 सेकंड · Vertical 9:16":"रोज़ का लक्ष्य: कम से कम 1 वीडियो · कम से कम 5 मिनट · Horizontal 16:9";}
@@ -38,5 +44,22 @@ function setMode(next){mode=next;shortMode.classList.toggle("active",mode==="sho
 shortMode.addEventListener("click",()=>setMode("shorts"));longMode.addEventListener("click",()=>setMode("long"));fillDurations();
 
 document.getElementById("dreamina").addEventListener("click",async()=>{const story=request.value.trim();if(!story){status.textContent="पहले अपनी कहानी लिखें।";request.focus();return;}window.open("https://dreamina.capcut.com/","_blank","noopener");try{await navigator.clipboard.writeText("Create a cinematic 3D cartoon video based on this story. Keep character appearance consistent across scenes. Story: "+story);status.textContent="कहानी कॉपी हो गई। Dreamina में Create Video खोलकर पेस्ट करें।";}catch(e){status.textContent="Dreamina खुल गया। अपनी कहानी कॉपी करके वहाँ पेस्ट करें।";}});
+
+document.getElementById("animatePhoto").addEventListener("click",async()=>{
+ const prompt=request.value.trim();
+ if(!selectedPhoto){status.textContent="पहले मोबाइल से एक तस्वीर चुनें।";photoInput.click();return;}
+ if(!prompt){status.textContent="तस्वीर में क्या होना चाहिए, उसका विवरण लिखें।";request.focus();return;}
+ button.disabled=true;document.getElementById("animatePhoto").disabled=true;output.innerHTML="";status.textContent="तस्वीर मुफ्त Wan 2.2 AI इंजन को भेजी जा रही है। GPU की कतार में समय लग सकता है…";
+ try{
+  const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(selectedPhoto);});
+  const response=await fetch("/api/animate-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt,imageData:dataUrl,mimeType:selectedPhoto.type})});
+  const data=await response.json();if(!response.ok)throw new Error(data.error||"तस्वीर से वीडियो नहीं बन पाया।");
+  const video=document.createElement("video");video.controls=true;video.playsInline=true;video.src=data.videoUrl;
+  const link=document.createElement("a");link.href=data.videoUrl;link.target="_blank";link.rel="noopener";link.textContent="तस्वीर से बनी क्लिप खोलें / डाउनलोड करें";
+  output.append(video,document.createElement("br"),link);status.textContent="तस्वीर से छोटी क्लिप तैयार है। यह पूरी 5 मिनट की वीडियो नहीं है।";
+ }catch(error){status.textContent=error.message||"मुफ्त इंजन से संपर्क नहीं हो पाया।";}
+ finally{button.disabled=false;document.getElementById("animatePhoto").disabled=false;}
+});
+
 button.addEventListener("click",async()=>{const prompt=request.value.trim();if(!prompt){status.textContent="पहले कहानी या दृश्य लिखें।";request.focus();return;}button.disabled=true;output.innerHTML="";status.textContent="AI इंजन एक छोटी टेस्ट क्लिप बना रहा है…";try{const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt,mode,durationSeconds:Number(duration.value),quality:Number(document.getElementById("quality").value)})});const data=await response.json();if(!response.ok)throw new Error(data.error||"वीडियो नहीं बन पाई।");const video=document.createElement("video");video.controls=true;video.playsInline=true;video.src=data.videoUrl;const link=document.createElement("a");link.href=data.videoUrl;link.target="_blank";link.rel="noopener";link.textContent="टेस्ट क्लिप खोलें / डाउनलोड करें";output.append(video,document.createElement("br"),link);status.textContent="टेस्ट क्लिप तैयार है। चुनी हुई पूरी अवधि अभी समर्थित नहीं है।";}catch(error){status.textContent=error.message||"कुछ गड़बड़ हुई। फिर कोशिश करें।";}finally{button.disabled=false;}});
 </script></body></html>
