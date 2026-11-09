@@ -26,13 +26,14 @@
 <p class="hint" id="micHint">माइक सुविधा समर्थित मोबाइल ब्राउज़र में काम करेगी। पहली बार माइक की अनुमति देनी पड़ सकती है।</p>
 <button type="button" class="go" id="director" style="background:linear-gradient(145deg,#b9a5ff,#8064e8);color:#17102f">🧠 AI Director से कहानी और 5 सीन बनवाओ</button>
 <div id="directorOutput" class="notice" style="display:none;white-space:pre-wrap;overflow-wrap:anywhere"></div>
-<p class="hint">AI Director कहानी, संवाद और हर सीन का अलग विज़ुअल प्रॉम्प्ट बनाएगा। यह अपने-आप वीडियो रेंडर नहीं करता। मुफ्त सेवा की सीमा 20 अनुरोध प्रतिदिन तक है और उपलब्धता बदल सकती है।</p>
+<p class="hint">AI Director कहानी, संवाद और हर सीन का अलग विज़ुअल प्रॉम्प्ट बनाएगा। यह अपने-आप वीडियो रेंडर नहीं करता। यह मुफ्त साझा AI सेवा है। प्रति IP प्रति घंटे उपयोग-सीमा है; व्यस्तता या HTTP 429 के कारण कभी-कभी काम रुक सकता है।</p>
 <button class="go" id="make">✨ AI से कार्टून वीडियो बनाओ</button>
 <button type="button" class="go" id="animatePhoto" style="background:linear-gradient(145deg,#8bd4ff,#4d9fe0);color:#071a2a">🖼️ चुनी तस्वीर को वीडियो बनाओ</button>
 <button type="button" id="dreamina" style="width:100%;border:1px solid #8bd4ff;border-radius:14px;padding:15px;background:#17334a;color:#e8f6ff;font:inherit;font-weight:800">🎬 Dreamina में कहानी बनाओ (बाहरी वेबसाइट)</button>
 <p class="hint">यह बटन आपकी कहानी कॉपी करके Dreamina खोलता है। वीडियो Dreamina में बनेगा, इस ऐप के अंदर सीधे नहीं।</p>
 <p class="status" id="status">रोज़ का लक्ष्य: 5 Shorts · Vertical 9:16।</p><div id="output"></div>
 </section>
+<div class="notice"><b>AI Director की गोपनीयता:</b> कहानी और प्रॉम्प्ट Vireonix AI सेवा को भेजे जाते हैं। उसकी शर्तों के अनुसार इनपुट, आउटपुट और चैट रिकॉर्ड सेवा सुधार व मॉडल प्रशिक्षण के लिए रखे और इस्तेमाल किए जा सकते हैं। पासवर्ड, निजी जानकारी या गोपनीय सामग्री न लिखें। सेवा मुफ्त है, लेकिन प्रति IP प्रति घंटे सीमा और उपलब्धता की गारंटी नहीं है। <a href="https://vireonix.ai/terms" target="_blank" rel="noopener">Vireonix की शर्तें पढ़ें</a>।</div>
 <div class="notice"><b>ज़रूरी जानकारी:</b> यह ऐप Shorts बनाने के लिए है, लेकिन AI इंजन अभी केवल छोटी टेस्ट क्लिप देता है; चुनी हुई पूरी अवधि, कई सीन, संवाद/आवाज़, Lip-sync और सही 9:16 आउटपुट की गारंटी अभी नहीं है। 720p/1080p चयन भी उपलब्ध नहीं है। तस्वीर से वीडियो बनाने पर आपकी चुनी तस्वीर बाहरी Hugging Face AI सेवा को भेजी जाती है; निजी या संवेदनशील तस्वीर अपलोड न करें।</div>
 </main>
 <script>
