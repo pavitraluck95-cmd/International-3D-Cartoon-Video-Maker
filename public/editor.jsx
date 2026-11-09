@@ -23,16 +23,16 @@ function makeProject(idea = "", plan = "") {
   while (scenes.length < 5) scenes.push("यहाँ अपना वीडियो क्लिप या तस्वीर जोड़ें।");
   const title = (idea || "मेरी नई कार्टून कहानी").slice(0, 70);
   const elements = [
-    { id: "background", type: "shape", layer: 10, shape: "rectangle",
+    { id: "background", type: "shape", layer: 1, shape: "rectangle",
       x: 0, y: 0, width: 720, height: 1280, fill_color: "#111827",
       time: 0, duration: 30 },
-    { id: "main-title", type: "text", layer: 1, time: 0, duration: 5,
+    { id: "main-title", type: "text", layer: 2, time: 0, duration: 5,
       x: 360, y: 180, x_anchor: 0.5, y_anchor: 0.5, width: 640, height: 180,
       text: title, font_family: "Inter", font_size: 54, font_weight: 800,
       fill_color: "#ffd36c", text_align: "center" }
   ];
   scenes.forEach((scene, i) => elements.push({
-    id: "scene-" + (i + 1), type: "text", layer: i + 2,
+    id: "scene-" + (i + 1), type: "text", layer: i + 3,
     time: i * 6, duration: 6, x: 360, y: 690,
     x_anchor: 0.5, y_anchor: 0.5, width: 620, height: 420,
     text: "सीन " + (i + 1) + "\n" + scene.slice(0, 260),
@@ -56,7 +56,7 @@ function App() {
   const [rendering, setRendering] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("अपनी कहानी लिखें, AI से सीन बनवाएँ या अपनी वीडियो/तस्वीरें जोड़ें।");
-  const assetStore = useMemo(() => createMemoryAssetStore(), []);
+  const assetStore = useMemo(() => createLocalAssetStore(), []);
 
   async function createAIPlan() {
     if (!idea.trim()) { setStatus("पहले कहानी लिखें।"); return; }
@@ -120,7 +120,7 @@ function App() {
         <button className="reset" onClick={() => { setProject(makeProject(idea)); setProjectKey(k => k + 1); setStatus("नई 30 सेकंड की Shorts टाइमलाइन तैयार है।"); }}>＋ नई Shorts</button>
       </div>
       <p className="editor-status">{rendering ? "MP4 export: " + Math.round(progress * 100) + "%" : status}</p>
-      <p className="editor-note">मीडिया जोड़ने के लिए एडिटर के Assets पैनल में Upload करें। मीडिया इस सत्र की मेमोरी में रखा जाता है; पेज बंद होने पर हट जाएगा। AI Director कहानी/टेक्स्ट बनाता है, खुद 3D फुटेज नहीं बनाता।</p>
+      <p className="editor-note">मीडिया जोड़ने के लिए एडिटर के Assets पैनल में Upload करें। मीडिया आपके ब्राउज़र की IndexedDB में सेव किया जाता है। AI Director कहानी/टेक्स्ट बनाता है, खुद 3D फुटेज नहीं बनाता।</p>
     </section>
     <main className="clipkit-shell">
       <Editor key={projectKey} initialSource={project}
