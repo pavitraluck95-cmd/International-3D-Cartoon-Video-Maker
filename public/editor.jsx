@@ -108,7 +108,8 @@ function App() {
       createWholeCartoon();
     }
   }, [autoStarted]);
-\n  async function exportMP4(source, request) {
+
+  async function exportMP4(source, request) {
     if (!("VideoEncoder" in window) || !("VideoFrame" in window)) {
       setStatus("इस मोबाइल ब्राउज़र में MP4 export के लिए WebCodecs उपलब्ध नहीं है। Chrome के नवीनतम संस्करण में खोलें।");
       return;
