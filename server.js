@@ -153,7 +153,7 @@ app.post("/api/animate-image", async (req, res) => {
     const submit = await fetch(base + "/gradio_api/call/generate_video", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [prompt, imagePath, 832, 480, 49, 20, 5, -1] }),
+      body: JSON.stringify({ data: [prompt, { path: imagePath, meta: { _type: "gradio.FileData" }, orig_name: "input." + ext }, 832, 480, 49, 20, 5, -1] }),
       signal: AbortSignal.timeout(60000)
     });
     if (!submit.ok) {
