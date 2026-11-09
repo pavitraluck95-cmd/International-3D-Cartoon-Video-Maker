@@ -247,7 +247,7 @@ app.post("/api/ai-director", async (req, res) => {
 
 
 async function requestCartoonImage(prompt) {
-  const base = "https://mrfakename-z-image-turbo.hf.space";
+  const base = "https://akhaliq-z-image-turbo.hf.space";
   const submit = await fetch(base + "/gradio_api/call/generate_image", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ data: [prompt, 1024, 576, 9, -1, true] }),
