@@ -245,6 +245,126 @@ app.post("/api/ai-director", async (req, res) => {
   }
 });
 
+
+async function requestCartoonImage(prompt) {
+  const base = "https://mrfakename-z-image-turbo.hf.space";
+  const submit = await fetch(base + "/gradio_api/call/generate_image", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data: [prompt, 1024, 576, 9, -1, true] }),
+    signal: AbortSignal.timeout(90000)
+  });
+  if (!submit.ok) throw new Error("मुफ्त Cartoon Image GPU व्यस्त है या सीमा पूरी है (HTTP " + submit.status + ")।");
+  const queued = await submit.json();
+  if (!queued.event_id) throw new Error("Image AI ने generation शुरू नहीं किया।");
+  const result = await fetch(base + "/gradio_api/call/generate_image/" + encodeURIComponent(queued.event_id), {
+    headers: { "Accept": "text/event-stream" }, signal: AbortSignal.timeout(180000)
+  });
+  if (!result.ok) throw new Error("Image AI से परिणाम नहीं मिला।");
+  const raw = await result.text();
+  let completed = null, failed = false;
+  for (const block of raw.split(/\r?\n\r?\n/)) {
+    const event = block.match(/^event:\s*(\S+)/m);
+    const data = block.split(/\r?\n/).filter(line => line.startsWith("data:"))
+      .map(line => line.slice(5).trim()).join("\n");
+    if (event && event[1] === "error") failed = true;
+    if (event && event[1] === "complete" && data) { try { completed = JSON.parse(data); } catch (e) {} }
+  }
+  if (failed || !completed) throw new Error("Image AI GPU व्यस्त है या तस्वीर नहीं बना पाया।");
+  function findImage(value) {
+    if (Array.isArray(value)) {
+      for (const item of value) { const found = findImage(item); if (found) return found; }
+    } else if (value && typeof value === "object") {
+      if (typeof value.url === "string" && value.url) return value.url;
+      if (typeof value.path === "string" && value.path) return /^https?:\/\//.test(value.path)
+        ? value.path : base + "/gradio_api/file=" + encodeURIComponent(value.path);
+      for (const key of ["data", "value", "output", "image", "files"]) {
+        const found = findImage(value[key]); if (found) return found;
+      }
+    } else if (typeof value === "string" && /^https?:\/\//.test(value)) return value;
+    return null;
+  }
+  const imageUrl = findImage(completed);
+  if (!imageUrl) throw new Error("Image AI ने तस्वीर का डाउनलोड पता नहीं दिया।");
+  const imageResponse = await fetch(imageUrl, { signal: AbortSignal.timeout(60000) });
+  if (!imageResponse.ok) throw new Error("बनी हुई तस्वीर डाउनलोड नहीं हो सकी।");
+  const contentType = imageResponse.headers.get("content-type") || "image/png";
+  if (!contentType.startsWith("image/")) throw new Error("Image AI ने image file के बजाय दूसरा परिणाम दिया।");
+  const bytes = Buffer.from(await imageResponse.arrayBuffer());
+  if (!bytes.length || bytes.length > 8 * 1024 * 1024) throw new Error("तस्वीर का आकार बहुत बड़ा है।");
+  return "data:" + contentType + ";base64," + bytes.toString("base64");
+}
+
+app.post("/api/ai-movie", async (req, res) => {
+  const idea = req.body && typeof req.body.idea === "string" ? req.body.idea.trim() : "";
+  if (!idea) return res.status(400).json({ error: "पहले कहानी का विषय लिखें या बोलें।" });
+  if (idea.length > 1400) return res.status(400).json({ error: "कहानी 1400 अक्षरों से छोटी रखें।" });
+  const system = [
+    "You are a professional family-friendly 3D cartoon film director and storyboard writer.",
+    "Return ONLY valid JSON with this exact shape:",
+    '{"title":"Hindi title","characterBible":"consistent character descriptions","scenes":[{"n":1,"duration":6,"visual":"Hindi visual description","dialogue":"short Hindi narration/dialogue","imagePrompt":"English image generation prompt"}]}',
+    "Create exactly 5 scenes for a 30-second vertical 9:16 cartoon short.",
+    "Maintain exactly the same characters, faces, clothing, colors and proportions across all scenes.",
+    "Every imagePrompt must repeat the full key character appearance from characterBible, then describe the current scene action and setting.",
+    "Image prompts must request polished high-quality 3D animated family-film cartoon art, expressive characters, cinematic lighting, vertical composition, no text, no subtitles, no watermark.",
+    "Make scenes visually different but story-continuous. Use original characters, no copyrighted franchise characters.",
+    "Keep each dialogue concise (max 18 Hindi words)."
+  ].join(" ");
+  try {
+    const upstream = await fetch("https://vireonix.ai/v1/chat/completions", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "auto",
+        messages: [{ role: "system", content: system }, { role: "user", content: idea }],
+        temperature: 0.65, max_tokens: 2200
+      }),
+      signal: AbortSignal.timeout(90000)
+    });
+    const raw = await upstream.text();
+    if (!upstream.ok) return res.status(upstream.status === 429 ? 429 : 502).json({
+      error: upstream.status === 429 ? "मुफ्त Story AI की सीमा पूरी है या सेवा व्यस्त है।" : "Story AI अभी जवाब नहीं दे रहा।"
+    });
+    const response = JSON.parse(raw);
+    let content = response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content;
+    if (Array.isArray(content)) content = content.map(part => part.text || "").join("\n");
+    if (typeof content !== "string") return res.status(502).json({ error: "Story AI ने कहानी नहीं दी।" });
+    const jsonText = content.trim().replace(/^\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}$/, "");
+    const story = JSON.parse(jsonText);
+    if (!Array.isArray(story.scenes) || story.scenes.length < 5) {
+      return res.status(502).json({ error: "Story AI ने पाँच पूरे दृश्य नहीं दिए।" });
+    }
+    story.scenes = story.scenes.slice(0, 5);
+    const images = [];
+    let imageError = "";
+    for (let i = 0; i < story.scenes.length; i++) {
+      const scene = story.scenes[i];
+      try {
+        images.push(await requestCartoonImage(String(scene.imagePrompt || scene.visual || "").slice(0, 1800)));
+      } catch (error) {
+        imageError = error.message || "तस्वीर नहीं बन पाई।";
+        console.error("Cartoon image scene " + (i + 1) + " failed:", imageError);
+        break;
+      }
+    }
+    return res.json({
+      title: String(story.title || idea).slice(0, 100),
+      characterBible: String(story.characterBible || ""),
+      scenes: story.scenes.map((scene, index) => ({
+        n: index + 1, duration: 6, visual: String(scene.visual || ""),
+        dialogue: String(scene.dialogue || ""), image: images[index] || null
+      })),
+      imagesCreated: images.length, complete: images.length === 5,
+      warning: imageError || (images.length === 5 ? "" : "कुछ दृश्यों की तस्वीरें नहीं बन पाईं।")
+    });
+  } catch (error) {
+    console.error("AI movie pipeline error:", error && error.name, error && error.message);
+    return res.status(502).json({
+      error: error && error.name === "TimeoutError"
+        ? "AI की साझा कतार में बहुत समय लग गया। बाद में फिर कोशिश करें।"
+        : (error && error.message || "AI वीडियो तैयारी में समस्या आई।")
+    });
+  }
+});
+
 app.get("/editor", (_req, res) => res.sendFile(path.join(distDir, "editor.html"), (err) => { if (err) res.sendFile(path.join(publicDir, "editor.html")); }));
 app.get("*", (_req, res) => res.sendFile(path.join(distDir, "index.html"), (err) => { if (err) res.sendFile(path.join(publicDir, "index.html")); }));
 app.listen(port, "0.0.0.0", () => console.log("App listening on " + port));
