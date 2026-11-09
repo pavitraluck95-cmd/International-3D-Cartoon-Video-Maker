@@ -274,7 +274,7 @@ async function requestCartoonImage(prompt) {
     if (Array.isArray(value)) {
       for (const item of value) { const found = findImage(item); if (found) return found; }
     } else if (value && typeof value === "object") {
-      if (typeof value.url === "string" && value.url) return /^https?:\\/\\//.test(value.url) ? value.url : new URL(value.url, base).href;
+      if (typeof value.url === "string" && value.url) return /^https?:\/\//.test(value.url) ? value.url : new URL(value.url, base).href;
       if (typeof value.path === "string" && value.path) return /^https?:\/\//.test(value.path)
         ? value.path : base + "/gradio_api/file=" + encodeURIComponent(value.path);
       for (const key of ["data", "value", "output", "image", "files"]) {
