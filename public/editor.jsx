@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Editor,
@@ -61,7 +61,8 @@ function makeProject(idea = "", story = null) {
   };
 }
 function App() {
-  const [idea, setIdea] = useState("");
+  const [idea, setIdea] = useState(() => new URLSearchParams(window.location.search).get("idea") || "");
+  const [autoStarted, setAutoStarted] = useState(false);
   const [project, setProject] = useState(() => makeProject());
   const [projectKey, setProjectKey] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -87,14 +88,18 @@ function App() {
       setProject(next); setProjectKey(k => k + 1);
       setStoryInfo(data);
       setStatus(data.complete
-        ? "कहानी और पाँच चलती वीडियो क्लिप Clipkit टाइमलाइन में लग गई हैं। अब Play करें और Export से MP4 बनाएँ।"
-        : "आंशिक प्रोजेक्ट तैयार है। " + (data.warning || "कुछ तस्वीरें नहीं बन पाईं।") + " बाकी तस्वीरें एडिटर में जोड़ सकते हैं।");
+        ? "कहानी और पाँच चलती वीडियो क्लिप तैयार। अब MP4 export शुरू होगा…"
+        : "आंशिक प्रोजेक्ट तैयार: " + (data.videosCreated || 0) + "/5 क्लिप। " + (data.warning || "मुफ्त GPU ने पूरा काम नहीं किया।"));
+      if (new URLSearchParams(window.location.search).get("auto") === "1") {
+        if (data.videosCreated > 0) await exportMP4(next, { resolution: "source" });
+        else setStatus("AI क्लिप नहीं बना पाया, इसलिए MP4 export नहीं किया गया: " + (data.warning || "मुफ्त GPU उपलब्ध नहीं है।"));
+      }
     } catch (error) {
       setStatus(error.message || "AI कहानी/तस्वीरें तैयार नहीं कर पाया।");
     } finally { setBusy(false); }
   }
 
-  async function exportMP4(source, request) {
+  useEffect(() => {\n    if (autoStarted) return;\n    const params = new URLSearchParams(window.location.search);\n    const initialIdea = params.get("idea");\n    if (params.get("auto") === "1" && initialIdea) { setAutoStarted(true); createWholeCartoon(); }\n  }, [autoStarted]);\n\n  async function exportMP4(source, request) {
     if (!("VideoEncoder" in window) || !("VideoFrame" in window)) {
       setStatus("इस मोबाइल ब्राउज़र में MP4 export के लिए WebCodecs उपलब्ध नहीं है। Chrome के नवीनतम संस्करण में खोलें।");
       return;
