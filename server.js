@@ -2,7 +2,7 @@ const express = require("express");
 const path = require("path");
 const app = express();
 const port = process.env.PORT || 3000;
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "10mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true, app: "International 3D Cartoon Video Maker" }));
@@ -115,6 +115,84 @@ app.post("/api/generate", async (req, res) => {
       ? "मुफ़्त इंजन की कतार में बहुत देर हो गई। थोड़ी देर बाद फिर कोशिश करें।"
       : "मुफ़्त AI इंजन से संपर्क नहीं हो पाया। थोड़ी देर बाद फिर कोशिश करें।";
     return res.status(502).json({ error: message });
+  }
+});
+
+
+// Image-to-video through the public Wan2.2 ZeroGPU Space.
+// Images are sent only for this generation request; they are not stored by this app.
+app.post("/api/animate-image", async (req, res) => {
+  const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
+  const imageData = typeof req.body?.imageData === "string" ? req.body.imageData : "";
+  const mimeType = typeof req.body?.mimeType === "string" ? req.body.mimeType : "";
+  if (!prompt) return res.status(400).json({ error: "तस्वीर में क्या होना चाहिए, उसका विवरण लिखें।" });
+  if (!/^data:image\/(jpeg|png|webp);base64,/.test(imageData) || !["image/jpeg","image/png","image/webp"].includes(mimeType)) {
+    return res.status(400).json({ error: "कृपया JPG, PNG या WEBP तस्वीर चुनें।" });
+  }
+  const base = "https://openking-wan2-video-generation.hf.space";
+  try {
+    const encoded = imageData.split(",")[1];
+    const bytes = Buffer.from(encoded, "base64");
+    if (!bytes.length || bytes.length > 6 * 1024 * 1024) {
+      return res.status(400).json({ error: "तस्वीर 6 MB से छोटी होनी चाहिए।" });
+    }
+    const ext = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+    const form = new FormData();
+    form.append("files", new Blob([bytes], { type: mimeType }), "input." + ext);
+    const upload = await fetch(base + "/gradio_api/upload", { method: "POST", body: form, signal: AbortSignal.timeout(60000) });
+    if (!upload.ok) {
+      console.error("Wan image upload failed:", upload.status, (await upload.text()).slice(0, 500));
+      return res.status(502).json({ error: "मुफ़्त तस्वीर-वीडियो इंजन अभी तस्वीर स्वीकार नहीं कर रहा। बाद में फिर कोशिश करें।" });
+    }
+    const uploaded = await upload.json();
+    const imagePath = Array.isArray(uploaded) ? uploaded[0] : uploaded;
+    if (typeof imagePath !== "string") {
+      console.error("Wan upload returned unexpected data:", JSON.stringify(uploaded).slice(0, 500));
+      return res.status(502).json({ error: "इंजन से तस्वीर का पता नहीं मिला।" });
+    }
+    const submit = await fetch(base + "/gradio_api/call/generate_video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: [prompt, imagePath, 832, 480, 49, 20, 5, -1] }),
+      signal: AbortSignal.timeout(60000)
+    });
+    if (!submit.ok) {
+      console.error("Wan submit failed:", submit.status, (await submit.text()).slice(0, 500));
+      return res.status(502).json({ error: "मुफ़्त AI इंजन ने अनुरोध स्वीकार नहीं किया।" });
+    }
+    const queued = await submit.json();
+    if (!queued.event_id) return res.status(502).json({ error: "इंजन ने वीडियो बनाना शुरू नहीं किया।" });
+    const result = await fetch(base + "/gradio_api/call/generate_video/" + encodeURIComponent(queued.event_id), {
+      headers: { "Accept": "text/event-stream" }, signal: AbortSignal.timeout(4 * 60 * 1000)
+    });
+    if (!result.ok) return res.status(502).json({ error: "इंजन से वीडियो परिणाम नहीं मिला।" });
+    const raw = await result.text();
+    let completed = null, failed = false;
+    for (const block of raw.split(/\r?\n\r?\n/)) {
+      const event = block.match(/^event:\s*(\S+)/m)?.[1];
+      const data = block.split(/\r?\n/).filter(x => x.startsWith("data:")).map(x => x.slice(5).trim()).join("\n");
+      if (event === "error") failed = true;
+      if (event === "complete" && data) { try { completed = JSON.parse(data); } catch {} }
+    }
+    if (failed || !completed) {
+      console.error("Wan generation failed:", raw.slice(-1200));
+      return res.status(502).json({ error: "मुफ़्त GPU व्यस्त है या तस्वीर से वीडियो नहीं बन पाया। थोड़ी देर बाद फिर कोशिश करें।" });
+    }
+    const findVideo = (v) => {
+      if (Array.isArray(v)) { for (const x of v) { const f = findVideo(x); if (f) return f; } }
+      else if (v && typeof v === "object") {
+        if (typeof v.url === "string" && v.url) return /^https?:/.test(v.url) ? v.url : new URL(v.url, base).href;
+        if (typeof v.path === "string" && v.path) return /^https?:/.test(v.path) ? v.path : base + "/gradio_api/file=" + encodeURIComponent(v.path);
+        for (const k of ["data","value","output","video","files"]) { const f = findVideo(v[k]); if (f) return f; }
+      } else if (typeof v === "string" && /^https?:/.test(v)) return v;
+      return null;
+    };
+    const videoUrl = findVideo(completed);
+    if (!videoUrl) return res.status(502).json({ error: "वीडियो बना, लेकिन डाउनलोड लिंक नहीं मिला।" });
+    return res.json({ videoUrl, durationSeconds: 2, message: "तस्वीर से छोटी टेस्ट क्लिप तैयार है।" });
+  } catch (error) {
+    console.error("Wan image-to-video error:", error?.name, error?.message);
+    return res.status(502).json({ error: "तस्वीर से वीडियो बनाने वाला मुफ्त इंजन अभी जवाब नहीं दे रहा। बाद में कोशिश करें।" });
   }
 });
 
