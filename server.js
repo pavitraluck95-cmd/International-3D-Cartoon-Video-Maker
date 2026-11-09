@@ -21,7 +21,7 @@ app.post("/api/generate", async (req, res) => {
       body: JSON.stringify({ data: [
         prompt,
         "worst quality, inconsistent motion, blurry, jittery, distorted, watermark",
-        "", "", 512, 704, "text-to-video", 3, 9, 42, true, 1, true
+        null, null, 512, 704, "text-to-video", 2, 9, 42, true, 3, false
       ] }),
       signal: AbortSignal.timeout(45000)
     });
