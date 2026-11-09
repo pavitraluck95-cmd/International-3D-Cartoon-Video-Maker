@@ -3,7 +3,10 @@ const path = require("path");
 const app = express();
 const port = process.env.PORT || 3000;
 app.use(express.json({ limit: "10mb" }));
-app.use(express.static(path.join(__dirname, "public")));
+const publicDir = path.join(__dirname, "public");
+const distDir = path.join(__dirname, "dist");
+app.use(express.static(distDir));
+app.use(express.static(publicDir));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true, app: "International 3D Cartoon Video Maker" }));
 
@@ -242,5 +245,6 @@ app.post("/api/ai-director", async (req, res) => {
   }
 });
 
-app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+app.get("/editor", (_req, res) => res.sendFile(path.join(distDir, "editor.html"), (err) => { if (err) res.sendFile(path.join(publicDir, "editor.html")); }));
+app.get("*", (_req, res) => res.sendFile(path.join(distDir, "index.html"), (err) => { if (err) res.sendFile(path.join(publicDir, "index.html")); }));
 app.listen(port, "0.0.0.0", () => console.log("App listening on " + port));
