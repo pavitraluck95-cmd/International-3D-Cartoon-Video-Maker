@@ -196,5 +196,51 @@ app.post("/api/animate-image", async (req, res) => {
   }
 });
 
+
+// Free AI Director (anonymous public gateway; limited shared capacity, no API key).
+// This plans a short cartoon story and scene prompts; it does NOT render video.
+app.post("/api/ai-director", async (req, res) => {
+  const idea = typeof req.body?.idea === "string" ? req.body.idea.trim() : "";
+  if (!idea) return res.status(400).json({ error: "कहानी का विषय लिखें।" });
+  if (idea.length > 1600) return res.status(400).json({ error: "विषय 1600 अक्षरों से छोटा रखें।" });
+  const system = "You are a professional 3D cartoon short-film writer and storyboard director. Reply in simple Hindi. Create one original family-friendly YouTube Short of exactly about 30 seconds, split into 5 scenes of about 6 seconds each. Keep character names, clothes, colors, proportions and environment consistent across all scenes. Include: catchy Hindi title, character continuity sheet, 5 numbered scenes with visual action/camera movement, Hindi dialogue or narration, sound/music cue, and one concise English visual-generation prompt per scene. Do not claim to render or create a video. Avoid copyrighted characters and existing franchises. Keep output compact and practical.";
+  try {
+    const upstream = await fetch("https://api.llmfaucet.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer free" },
+      body: JSON.stringify({
+        model: "auto:smart",
+        messages: [{ role: "system", content: system }, { role: "user", content: idea }],
+        temperature: 0.7,
+        max_tokens: 1800
+      }),
+      signal: AbortSignal.timeout(90000)
+    });
+    const raw = await upstream.text();
+    if (!upstream.ok) {
+      console.error("AI Director gateway error:", upstream.status, raw.slice(0, 700));
+      return res.status(upstream.status === 429 ? 429 : 502).json({
+        error: upstream.status === 429
+          ? "मुफ्त AI Director की आज की सीमा पूरी हो गई या कतार व्यस्त है। बाद में फिर कोशिश करें।"
+          : "मुफ्त AI Director अभी उपलब्ध नहीं है। कुछ देर बाद फिर कोशिश करें।"
+      });
+    }
+    let data;
+    try { data = JSON.parse(raw); } catch {
+      console.error("AI Director invalid JSON:", raw.slice(0, 500));
+      return res.status(502).json({ error: "AI Director से सही जवाब नहीं मिला।" });
+    }
+    const answer = data?.choices?.[0]?.message?.content;
+    if (typeof answer !== "string" || !answer.trim()) {
+      console.error("AI Director empty response:", raw.slice(0, 700));
+      return res.status(502).json({ error: "AI Director ने खाली जवाब दिया।" });
+    }
+    return res.json({ plan: answer.trim(), model: data.model || "auto:smart" });
+  } catch (error) {
+    console.error("AI Director request failed:", error?.name, error?.message);
+    return res.status(502).json({ error: "AI Director से संपर्क नहीं हो पाया। मुफ्त सेवा की उपलब्धता बदल सकती है।" });
+  }
+});
+
 app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 app.listen(port, "0.0.0.0", () => console.log("App listening on " + port));
