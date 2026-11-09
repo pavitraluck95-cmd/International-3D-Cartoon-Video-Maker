@@ -294,6 +294,72 @@ async function requestCartoonImage(prompt) {
   return "data:" + contentType + ";base64," + bytes.toString("base64");
 }
 
+
+async function generateWanMotionClip(imageData, prompt) {
+  const base = "https://openking-wan2-video-generation.hf.space";
+  const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(imageData || "");
+  if (!match) throw new Error("दृश्य की reference image सही नहीं है।");
+  const mimeType = "image/" + match[1];
+  const bytes = Buffer.from(match[2], "base64");
+  const ext = match[1] === "jpeg" ? "jpg" : match[1];
+  const form = new FormData();
+  form.append("files", new Blob([bytes], { type: mimeType }), "scene." + ext);
+  const upload = await fetch(base + "/gradio_api/upload", {
+    method: "POST", body: form, signal: AbortSignal.timeout(60000)
+  });
+  if (!upload.ok) throw new Error("Wan AI reference image upload नहीं कर पाया।");
+  const uploaded = await upload.json();
+  const imagePath = Array.isArray(uploaded) ? uploaded[0] : uploaded;
+  if (typeof imagePath !== "string") throw new Error("Wan AI को reference image नहीं मिली।");
+  const submit = await fetch(base + "/gradio_api/call/generate_video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data: [
+      prompt, { path: imagePath, meta: { _type: "gradio.FileData" }, orig_name: "scene." + ext },
+      832, 480, 73, 20, 5, -1
+    ] }),
+    signal: AbortSignal.timeout(60000)
+  });
+  if (!submit.ok) throw new Error("Wan 2.2 वीडियो इंजन ने अनुरोध स्वीकार नहीं किया।");
+  const queued = await submit.json();
+  if (!queued.event_id) throw new Error("Wan 2.2 ने वीडियो बनाना शुरू नहीं किया।");
+  const result = await fetch(base + "/gradio_api/call/generate_video/" + encodeURIComponent(queued.event_id), {
+    headers: { "Accept": "text/event-stream" }, signal: AbortSignal.timeout(240000)
+  });
+  if (!result.ok) throw new Error("Wan 2.2 से वीडियो परिणाम नहीं मिला।");
+  const raw = await result.text();
+  let completed = null, failed = false;
+  for (const block of raw.split(/\r?\n\r?\n/)) {
+    const event = block.match(/^event:\s*(\S+)/m)?.[1];
+    const data = block.split(/\r?\n/).filter(line => line.startsWith("data:"))
+      .map(line => line.slice(5).trim()).join("\n");
+    if (event === "error") failed = true;
+    if (event === "complete" && data) { try { completed = JSON.parse(data); } catch {} }
+  }
+  if (failed || !completed) throw new Error("Wan 2.2 का मुफ्त GPU व्यस्त है या वीडियो नहीं बना पाया।");
+  function findVideo(value) {
+    if (Array.isArray(value)) {
+      for (const item of value) { const found = findVideo(item); if (found) return found; }
+    } else if (value && typeof value === "object") {
+      if (typeof value.url === "string" && value.url) return /^https?:/.test(value.url) ? value.url : new URL(value.url, base).href;
+      if (typeof value.path === "string" && value.path) return /^https?:/.test(value.path) ? value.path : base + "/gradio_api/file=" + encodeURIComponent(value.path);
+      for (const key of ["data", "value", "output", "video", "files"]) {
+        const found = findVideo(value[key]); if (found) return found;
+      }
+    } else if (typeof value === "string" && /^https?:/.test(value)) return value;
+    return null;
+  }
+  const videoUrl = findVideo(completed);
+  if (!videoUrl) throw new Error("Wan 2.2 ने MP4 का पता नहीं दिया।");
+  const videoResponse = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) });
+  if (!videoResponse.ok) throw new Error("बनी हुई वीडियो डाउनलोड नहीं हो सकी।");
+  const contentType = videoResponse.headers.get("content-type") || "video/mp4";
+  if (!contentType.startsWith("video/")) throw new Error("Wan 2.2 ने MP4 के बजाय दूसरा परिणाम दिया।");
+  const videoBytes = Buffer.from(await videoResponse.arrayBuffer());
+  if (!videoBytes.length || videoBytes.length > 18 * 1024 * 1024) throw new Error("बनी हुई वीडियो का आकार बहुत बड़ा है।");
+  return "data:video/mp4;base64," + videoBytes.toString("base64");
+}
+
 app.post("/api/ai-movie", async (req, res) => {
   const idea = req.body && typeof req.body.idea === "string" ? req.body.idea.trim() : "";
   if (!idea) return res.status(400).json({ error: "पहले कहानी का विषय लिखें या बोलें।" });
@@ -334,26 +400,44 @@ app.post("/api/ai-movie", async (req, res) => {
     }
     story.scenes = story.scenes.slice(0, 5);
     const images = [];
+    const videos = [];
     let imageError = "";
+    let videoError = "";
     for (let i = 0; i < story.scenes.length; i++) {
       const scene = story.scenes[i];
+      const imagePrompt = String(scene.imagePrompt || scene.visual || "").slice(0, 1800);
       try {
-        images.push(await requestCartoonImage(String(scene.imagePrompt || scene.visual || "").slice(0, 1800)));
+        const image = await requestCartoonImage(imagePrompt);
+        images.push(image);
+        const motionPrompt = [
+          imagePrompt,
+          "Animate this exact 3D cartoon character and scene with clear continuous full-body movement, natural walking or action matching the scene, expressive face and eyes, moving hands and body, smooth cinematic camera movement, stable character identity, consistent clothes and colors, polished animated feature film quality, vertical-friendly centered framing. The character must visibly move; do not make a still image or slideshow."
+        ].join(" ");
+        const video = await generateWanMotionClip(image, motionPrompt);
+        videos.push(video);
       } catch (error) {
-        imageError = error.message || "तस्वीर नहीं बन पाई।";
-        console.error("Cartoon image scene " + (i + 1) + " failed:", imageError);
+        const message = error.message || "3D motion video नहीं बन पाई।";
+        if (images.length < i + 1) imageError = message;
+        else videoError = message;
+        console.error("AI movie scene " + (i + 1) + " failed:", message);
         break;
       }
     }
+    const readyCount = videos.length;
     return res.json({
       title: String(story.title || idea).slice(0, 100),
       characterBible: String(story.characterBible || ""),
       scenes: story.scenes.map((scene, index) => ({
-        n: index + 1, duration: 6, visual: String(scene.visual || ""),
-        dialogue: String(scene.dialogue || ""), image: images[index] || null
+        n: index + 1, duration: 3, visual: String(scene.visual || ""),
+        dialogue: String(scene.dialogue || ""),
+        image: images[index] || null,
+        video: videos[index] || null
       })),
-      imagesCreated: images.length, complete: images.length === 5,
-      warning: imageError || (images.length === 5 ? "" : "कुछ दृश्यों की तस्वीरें नहीं बन पाईं।")
+      imagesCreated: images.length,
+      videosCreated: readyCount,
+      durationSeconds: readyCount * 3,
+      complete: readyCount === 5,
+      warning: videoError || imageError || (readyCount === 5 ? "" : "कुछ 3D चलती वीडियो क्लिप अभी नहीं बन पाईं।")
     });
   } catch (error) {
     console.error("AI movie pipeline error:", error && error.name, error && error.message);
