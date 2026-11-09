@@ -9,9 +9,10 @@
 <body><main class="app">
 <header class="head"><div class="logo">🎬🌍</div><h1>International 3D Cartoon Video Maker</h1><p class="sub">अपनी कहानी लिखें या मोबाइल के माइक से बोलें। केवल YouTube Shorts बनाएं — Vertical 9:16।</p></header>
 <section class="panel">
+<a href="/editor" style="display:block;text-align:center;padding:14px;margin:0 0 14px;border-radius:12px;background:linear-gradient(145deg,#b9a5ff,#8064e8);color:#17102f;text-decoration:none;font-weight:900">✂️ Clipkit AI Video Editor खोलें · टाइमलाइन एडिट + MP4</a>
 <strong>📱 YouTube Shorts · Vertical 9:16</strong>
 <label class="field" for="duration">वीडियो की अवधि</label><select id="duration"></select>
-<p class="hint" id="formatHint">रोज़ का लक्ष्य: 5 Shorts · हर एक 30 सेकंड · Vertical 9:16</p>
+<p class="hint" id="formatHint">रोज़ का लक्ष्य: 4 Shorts · हर एक 30 सेकंड · Vertical 9:16</p>
 <p class="hint">वीडियो का वास्तविक आकार AI इंजन तय करेगा। अभी 720p या 1080p चुनने की सुविधा उपलब्ध नहीं है।</p>
 </section>
 <section class="panel">
@@ -33,7 +34,7 @@
 <button type="button" class="go" id="animatePhoto" style="background:linear-gradient(145deg,#8bd4ff,#4d9fe0);color:#071a2a">🖼️ चुनी तस्वीर को वीडियो बनाओ</button>
 <button type="button" id="dreamina" style="width:100%;border:1px solid #8bd4ff;border-radius:14px;padding:15px;background:#17334a;color:#e8f6ff;font:inherit;font-weight:800">🎬 Dreamina में कहानी बनाओ (बाहरी वेबसाइट)</button>
 <p class="hint">यह बटन आपकी कहानी कॉपी करके Dreamina खोलता है। वीडियो Dreamina में बनेगा, इस ऐप के अंदर सीधे नहीं।</p>
-<p class="status" id="status">रोज़ का लक्ष्य: 5 Shorts · Vertical 9:16।</p><div id="output"></div>
+<p class="status" id="status">रोज़ का लक्ष्य: 4 Shorts · Vertical 9:16।</p><div id="output"></div>
 </section>
 <div class="notice"><b>AI Director की गोपनीयता:</b> कहानी और प्रॉम्प्ट Vireonix AI सेवा को भेजे जाते हैं। उसकी शर्तों के अनुसार इनपुट, आउटपुट और चैट रिकॉर्ड सेवा सुधार व मॉडल प्रशिक्षण के लिए रखे और इस्तेमाल किए जा सकते हैं। पासवर्ड, निजी जानकारी या गोपनीय सामग्री न लिखें। सेवा मुफ्त है, लेकिन प्रति IP प्रति घंटे सीमा और उपलब्धता की गारंटी नहीं है। <a href="https://vireonix.ai/terms" target="_blank" rel="noopener">Vireonix की शर्तें पढ़ें</a>।</div>
 <div class="notice"><b>ज़रूरी जानकारी:</b> यह ऐप Shorts बनाने के लिए है, लेकिन AI इंजन अभी केवल छोटी टेस्ट क्लिप देता है; चुनी हुई पूरी अवधि, कई सीन, संवाद/आवाज़, Lip-sync और सही 9:16 आउटपुट की गारंटी अभी नहीं है। 720p/1080p चयन भी उपलब्ध नहीं है। तस्वीर से वीडियो बनाने पर आपकी चुनी तस्वीर बाहरी Hugging Face AI सेवा को भेजी जाती है; निजी या संवेदनशील तस्वीर अपलोड न करें।</div>
@@ -58,7 +59,7 @@ else{
  recognition.onend=()=>{listening=false;speakButton.textContent="🎙️ माइक से कहानी बोलें";if(micHint.textContent==="अब अपनी कहानी बोलें…")micHint.textContent="आपकी बोली हुई कहानी टेक्स्ट बॉक्स में जुड़ गई है।";};
 }
 
-function fillDurations(){duration.innerHTML="";const values=[30,60,120,180];for(const s of values){const o=document.createElement("option");o.value=s;o.textContent=s<60?s+" सेकंड":(s/60)+" मिनट";if(s===30)o.selected=true;duration.append(o)}hint.textContent="रोज़ का लक्ष्य: 5 Shorts · हर एक 30 सेकंड · Vertical 9:16";}
+function fillDurations(){duration.innerHTML="";const values=[30,60,120,180];for(const s of values){const o=document.createElement("option");o.value=s;o.textContent=s<60?s+" सेकंड":(s/60)+" मिनट";if(s===30)o.selected=true;duration.append(o)}hint.textContent="रोज़ का लक्ष्य: 4 Shorts · हर एक 30 सेकंड · Vertical 9:16";}
 fillDurations();
 
 document.getElementById("yapsVideo").addEventListener("click",async()=>{const story=request.value.trim();if(!story){status.textContent="पहले 30 सेकंड की कहानी लिखें या AI Director से बनवाएँ।";request.focus();return;}if(story.length>600){status.textContent="Yaps में कहानी की सीमा 600 अक्षर है। कृपया कहानी छोटी करें।";request.focus();return;}const yapsUrl="https://www.yaps.ai/tools/script-to-video";window.open(yapsUrl,"_blank","noopener");try{await navigator.clipboard.writeText(story);status.textContent="कहानी कॉपी हो गई। Yaps में पेस्ट करें, 9:16 चुनें और Create the video दबाएँ।";}catch(e){status.textContent="Yaps खुल गया। कहानी कॉपी करके वहाँ पेस्ट करें, 9:16 चुनें और वीडियो बनाएँ।";}});
