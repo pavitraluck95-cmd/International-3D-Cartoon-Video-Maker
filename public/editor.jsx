@@ -99,7 +99,16 @@ function App() {
     } finally { setBusy(false); }
   }
 
-  useEffect(() => {\n    if (autoStarted) return;\n    const params = new URLSearchParams(window.location.search);\n    const initialIdea = params.get("idea");\n    if (params.get("auto") === "1" && initialIdea) { setAutoStarted(true); createWholeCartoon(); }\n  }, [autoStarted]);\n\n  async function exportMP4(source, request) {
+  useEffect(() => {
+    if (autoStarted) return;
+    const params = new URLSearchParams(window.location.search);
+    const initialIdea = params.get("idea");
+    if (params.get("auto") === "1" && initialIdea) {
+      setAutoStarted(true);
+      createWholeCartoon();
+    }
+  }, [autoStarted]);
+\n  async function exportMP4(source, request) {
     if (!("VideoEncoder" in window) || !("VideoFrame" in window)) {
       setStatus("इस मोबाइल ब्राउज़र में MP4 export के लिए WebCodecs उपलब्ध नहीं है। Chrome के नवीनतम संस्करण में खोलें।");
       return;
