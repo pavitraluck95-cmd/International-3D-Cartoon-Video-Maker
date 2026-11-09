@@ -9,38 +9,62 @@ import { ClipkitRuntime } from "@clipkit/runtime";
 import "@clipkit/editor/styles.css";
 import "./editor.css";
 
-function makeProject(idea = "", plan = "") {
-  const lines = plan.split(/\r?\n/)
-    .map(line => line.replace(/^\s*(?:[-*#]+\s*|\d+[.)]\s*)/, "").trim())
-    .filter(line => line.length > 12);
-  const sceneLines = lines.filter(line => /सीन|scene|दृश्य/i.test(line));
-  let scenes = (sceneLines.length >= 3 ? sceneLines : lines).slice(0, 5);
-  if (scenes.length < 5) {
-    const sentences = (plan || idea || "अपनी कहानी यहाँ लिखें।")
-      .split(/[।.!?\n]+/).map(s => s.trim()).filter(Boolean);
-    scenes = [...scenes, ...sentences].slice(0, 5);
-  }
-  while (scenes.length < 5) scenes.push("यहाँ अपना वीडियो क्लिप या तस्वीर जोड़ें।");
-  const title = (idea || "मेरी नई कार्टून कहानी").slice(0, 70);
+function makeProject(idea = "", story = null) {
+  const scenes = story && Array.isArray(story.scenes) ? story.scenes : [];
   const elements = [
     { id: "background", type: "shape", layer: 1, shape: "rectangle",
       x: 0, y: 0, width: 720, height: 1280, fill_color: "#111827",
       time: 0, duration: 30 },
-    { id: "main-title", type: "text", layer: 2, time: 0, duration: 5,
-      x: 360, y: 180, x_anchor: 0.5, y_anchor: 0.5, width: 640, height: 180,
-      text: title, font_family: "Inter", font_size: 54, font_weight: 800,
-      fill_color: "#ffd36c", text_align: "center" }
+    { id: "main-title", type: "text", layer: 20, time: 0, duration: 3,
+      x: 360, y: 110, x_anchor: 0.5, y_anchor: 0.5, width: 660, height: 140,
+      text: String(story && story.title || idea || "मेरी नई कार्टून कहानी").slice(0, 80),
+      font_family: "Inter", font_size: 48, font_weight: 800,
+      fill_color: "#ffd36c", text_align: "center",
+      background_color: "#172033", background_padding: [18, 18],
+      background_border_radius: 18 }
   ];
-  scenes.forEach((scene, i) => elements.push({
-    id: "scene-" + (i + 1), type: "text", layer: i + 3,
-    time: i * 6, duration: 6, x: 360, y: 690,
-    x_anchor: 0.5, y_anchor: 0.5, width: 620, height: 420,
-    text: "सीन " + (i + 1) + "\n" + scene.slice(0, 260),
-    font_family: "Inter", font_size: 34, font_weight: 650,
-    fill_color: "#ffffff", text_align: "center",
-    background_color: "#26344f", background_padding: [24, 24],
-    background_border_radius: 22
-  }));
+  if (scenes.length) {
+    scenes.slice(0, 5).forEach((scene, i) => {
+      const start = i * 6;
+      if (scene.image) {
+        elements.push({
+          id: "scene-image-" + (i + 1), type: "image", layer: 2,
+          source: scene.image, fit: "cover",
+          x: 0, y: 0, width: 720, height: 1280,
+          time: start, duration: 6
+        });
+      } else {
+        elements.push({
+          id: "scene-placeholder-" + (i + 1), type: "shape", layer: 2,
+          shape: "rectangle", x: 0, y: 0, width: 720, height: 1280,
+          fill_color: "#26344f", time: start, duration: 6
+        });
+      }
+      const caption = [scene.visual, scene.dialogue].filter(Boolean).join("\n");
+      elements.push({
+        id: "scene-caption-" + (i + 1), type: "text", layer: 3,
+        time: start, duration: 6, x: 360, y: 1080,
+        x_anchor: 0.5, y_anchor: 0.5, width: 660, height: 260,
+        text: caption.slice(0, 280), font_family: "Inter",
+        font_size: 28, font_weight: 700, fill_color: "#ffffff",
+        text_align: "center", background_color: "#101827",
+        background_padding: [18, 18], background_border_radius: 18
+      });
+    });
+  } else {
+    for (let i = 0; i < 5; i++) {
+      elements.push({
+        id: "scene-placeholder-" + (i + 1), type: "text", layer: 3,
+        time: i * 6, duration: 6, x: 360, y: 680,
+        x_anchor: 0.5, y_anchor: 0.5, width: 620, height: 420,
+        text: "सीन " + (i + 1) + "\nयहाँ AI से बनी तस्वीर आएगी",
+        font_family: "Inter", font_size: 34, font_weight: 650,
+        fill_color: "#ffffff", text_align: "center",
+        background_color: "#26344f", background_padding: [24, 24],
+        background_border_radius: 22
+      });
+    }
+  }
   return {
     clipkit_version: "1.0", output_format: "mp4",
     width: 720, height: 1280, duration: 30, frame_rate: 30,
@@ -55,24 +79,30 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState("अपनी कहानी लिखें, AI से सीन बनवाएँ या अपनी वीडियो/तस्वीरें जोड़ें।");
+  const [status, setStatus] = useState("कहानी लिखें या माइक से बोलें। AI कहानी, कार्टून तस्वीरें और Clipkit टाइमलाइन तैयार करेगा।");
+  const [storyInfo, setStoryInfo] = useState(null);
   const assetStore = useMemo(() => createLocalAssetStore(), []);
 
-  async function createAIPlan() {
-    if (!idea.trim()) { setStatus("पहले कहानी लिखें।"); return; }
-    setBusy(true); setStatus("AI Director पाँच सीन का स्टोरीबोर्ड बना रहा है…");
+  async function createWholeCartoon() {
+    if (!idea.trim()) { setStatus("पहले कहानी का विषय लिखें या बोलें।"); return; }
+    setBusy(true); setStoryInfo(null);
+    setStatus("पहला चरण: AI कहानी और किरदार तय कर रहा है…");
     try {
-      const response = await fetch("/api/ai-director", {
+      const response = await fetch("/api/ai-movie", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idea: idea.trim() })
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "AI Director अभी उपलब्ध नहीं है।");
-      const next = makeProject(idea.trim(), data.plan || "");
+      if (!response.ok) throw new Error(data.error || "AI अभी उपलब्ध नहीं है।");
+      setStatus("दूसरा चरण: " + data.imagesCreated + "/5 कार्टून तस्वीरें बनीं। Clipkit टाइमलाइन तैयार हो रही है…");
+      const next = makeProject(idea.trim(), data);
       setProject(next); setProjectKey(k => k + 1);
-      setStatus("5 सीन की एडिटिंग टाइमलाइन तैयार है। अब बाईं ओर से मीडिया जोड़ें और टाइमलाइन में एडिट करें।");
+      setStoryInfo(data);
+      setStatus(data.complete
+        ? "कहानी और पाँच कार्टून तस्वीरें Clipkit टाइमलाइन में लगा दी गई हैं। अब Play करें और Export से MP4 बनाएँ।"
+        : "आंशिक प्रोजेक्ट तैयार है। " + (data.warning || "कुछ तस्वीरें नहीं बन पाईं।") + " बाकी तस्वीरें एडिटर में जोड़ सकते हैं।");
     } catch (error) {
-      setStatus(error.message || "AI Director से संपर्क नहीं हो पाया।");
+      setStatus(error.message || "AI कहानी/तस्वीरें तैयार नहीं कर पाया।");
     } finally { setBusy(false); }
   }
 
@@ -109,18 +139,19 @@ function App() {
   return <div className="editor-app">
     <header className="editor-header">
       <a href="/" className="back-link">← मुख्य ऐप</a>
-      <div><strong>🎬 International 3D Cartoon Editor</strong><small>Clipkit Timeline · Vertical Shorts 9:16</small></div>
+      <div><strong>🎬 International 3D Cartoon Video Maker</strong><small>AI Story + Cartoon Images + Clipkit Editor</small></div>
     </header>
     <section className="director-bar">
-      <label htmlFor="story">AI Director — अपनी कहानी लिखें</label>
+      <label htmlFor="story">अपनी कहानी लिखें या बोलें</label>
       <textarea id="story" value={idea} onChange={e => setIdea(e.target.value)}
-        placeholder="उदाहरण: एक छोटा कार्टून हाथी अपने दोस्त को जंगल में खोने से बचाता है…" />
+        placeholder="उदाहरण: एक छोटा हाथी जंगल में खोए अपने दोस्त को ढूँढता है…" />
       <div className="director-actions">
-        <button onClick={createAIPlan} disabled={busy}>{busy ? "सीन बन रहे हैं…" : "🧠 AI से 5 सीन बनाओ"}</button>
-        <button className="reset" onClick={() => { setProject(makeProject(idea)); setProjectKey(k => k + 1); setStatus("नई 30 सेकंड की Shorts टाइमलाइन तैयार है।"); }}>＋ नई Shorts</button>
+        <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "✨ पूरी कार्टून वीडियो तैयार करो"}</button>
+        <button className="reset" onClick={() => { setProject(makeProject(idea)); setProjectKey(k => k + 1); setStoryInfo(null); setStatus("नई खाली 30 सेकंड की Shorts टाइमलाइन तैयार है।"); }}>＋ नई Shorts</button>
       </div>
       <p className="editor-status">{rendering ? "MP4 export: " + Math.round(progress * 100) + "%" : status}</p>
-      <p className="editor-note">मीडिया जोड़ने के लिए एडिटर के Assets पैनल में Upload करें। मीडिया आपके ब्राउज़र की IndexedDB में सेव किया जाता है। AI Director कहानी/टेक्स्ट बनाता है, खुद 3D फुटेज नहीं बनाता।</p>
+      {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · कार्टून तस्वीरें: {storyInfo.imagesCreated}/5</p>}
+      <p className="editor-note">AI कहानी और स्थिर कार्टून तस्वीरें बनाकर Clipkit टाइमलाइन में लगाएगा। मुफ्त सार्वजनिक AI सेवाओं में कतार/दैनिक सीमा हो सकती है। यह अभी स्थिर चित्रों से बना एनिमेटेड स्लाइड-सीन है, पूर्ण 3D चलती हुई character animation या AI voice नहीं।</p>
     </section>
     <main className="clipkit-shell">
       <Editor key={projectKey} initialSource={project}
@@ -130,7 +161,7 @@ function App() {
         onRender={exportMP4}
         rendering={rendering}
         renderProgress={progress}
-        exportFormats={[{ id: "mp4", label: "MP4 · फोन पर मुफ्त export" }]}
+        exportFormats={[{ id: "mp4", label: "MP4 · फोन पर export" }]}
         theme="dark" backend="auto" />
     </main>
   </div>;
