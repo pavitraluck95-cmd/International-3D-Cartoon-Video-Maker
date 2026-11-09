@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   Editor,
   ADVANCED_CONFIGURATION,
-  createMemoryAssetStore
+  createLocalAssetStore
 } from "@clipkit/editor";
 import { ClipkitRuntime } from "@clipkit/runtime";
 import "@clipkit/editor/styles.css";
@@ -109,7 +109,7 @@ function App() {
   return <div className="editor-app">
     <header className="editor-header">
       <a href="/" className="back-link">← मुख्य ऐप</a>
-      <div><strong>🎬 RL AI Video Editor</strong><small>Clipkit Timeline · Vertical Shorts 9:16</small></div>
+      <div><strong>🎬 International 3D Cartoon Editor</strong><small>Clipkit Timeline · Vertical Shorts 9:16</small></div>
     </header>
     <section className="director-bar">
       <label htmlFor="story">AI Director — अपनी कहानी लिखें</label>
