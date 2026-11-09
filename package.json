@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "build:android": "npx cap sync android",
-    "prestart": "vite build"
+    "build": "vite build"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",
