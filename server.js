@@ -132,7 +132,7 @@ app.post("/api/animate-image", async (req, res) => {
   if (!/^data:image\/(jpeg|png|webp);base64,/.test(imageData) || !["image/jpeg","image/png","image/webp"].includes(mimeType)) {
     return res.status(400).json({ error: "कृपया JPG, PNG या WEBP तस्वीर चुनें।" });
   }
-  const base = "https://openking-wan2-video-generation.hf.space";
+  const base = "https://cbensimon-wan2-2-fp8da-aoti-preview2.hf.space";
   try {
     const encoded = imageData.split(",")[1];
     const bytes = Buffer.from(encoded, "base64");
@@ -156,7 +156,7 @@ app.post("/api/animate-image", async (req, res) => {
     const submit = await fetch(base + "/gradio_api/call/generate_video", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [prompt, { path: imagePath, meta: { _type: "gradio.FileData" }, orig_name: "input." + ext }, 832, 480, 49, 20, 5, -1] }),
+      body: JSON.stringify({ data: [{ path: imagePath, url: base + "/gradio_api/file=" + imagePath, orig_name: "input." + ext, size: null, mime_type: mimeType, meta: { _type: "gradio.FileData" } }, null, prompt, 6, "色调艳丽, 过曝, 静态, 细节模糊不清, 字幕, 最差质量, 低质量, 畸形的, 多余的手指, 静止不动的画面", 3.5, 1, 1, 42, true, 6, "UniPCMultistep", 3, 16, false, true] }),
       signal: AbortSignal.timeout(60000)
     });
     if (!submit.ok) {
@@ -296,7 +296,7 @@ async function requestCartoonImage(prompt) {
 
 
 async function generateWanMotionClip(imageData, prompt) {
-  const base = "https://openking-wan2-video-generation.hf.space";
+  const base = "https://cbensimon-wan2-2-fp8da-aoti-preview2.hf.space";
   const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(imageData || "");
   if (!match) throw new Error("दृश्य की reference image सही नहीं है।");
   const mimeType = "image/" + match[1];
@@ -315,8 +315,9 @@ async function generateWanMotionClip(imageData, prompt) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ data: [
-      prompt, { path: imagePath, meta: { _type: "gradio.FileData" }, orig_name: "scene." + ext },
-      832, 480, 73, 20, 5, -1
+      { path: imagePath, url: base + "/gradio_api/file=" + imagePath, orig_name: "scene." + ext, size: null, mime_type: mimeType, meta: { _type: "gradio.FileData" } },
+      null, prompt, 6, "色调艳丽, 过曝, 静态, 细节模糊不清, 字幕, 最差质量, 低质量, 畸形的, 多余的手指, 静止不动的画面",
+      3.5, 1, 1, 42, true, 6, "UniPCMultistep", 3, 16, false, true
     ] }),
     signal: AbortSignal.timeout(60000)
   });
