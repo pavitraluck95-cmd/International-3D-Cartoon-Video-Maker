@@ -7,13 +7,9 @@
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(145deg,#17152b,#202b46);color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:18px}.app{width:min(100%,560px);margin:0 auto}.head{text-align:center}.logo{font-size:48px}.app h1{font-size:clamp(25px,7vw,34px);margin:6px 0}.sub{color:#c8c9dc;line-height:1.55;margin:8px 0 20px}.panel{background:#ffffff0c;border:1px solid #ffffff25;border-radius:18px;padding:16px;margin:14px 0}.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mode{border:1px solid #ffffff38;border-radius:14px;background:#11182b;color:#fff;padding:14px 8px;font:inherit;text-align:center}.mode.active{border:2px solid #ffd36c;background:#3b3021}.mode b{display:block;font-size:16px}.mode small{color:#c8c9dc}.field{display:block;text-align:left;font-weight:700;margin:14px 0 7px}select,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid #ffffff35;background:#11182b;color:#fff;font:inherit;font-size:16px}textarea{min-height:120px;resize:vertical}option{background:#11182b}.hint{color:#c8c9dc;font-size:13px;line-height:1.5;margin:7px 0}.go{width:100%;border:0;border-radius:14px;padding:17px;background:linear-gradient(145deg,#ffd36c,#ffad28);color:#211805;font-size:19px;font-weight:850;margin:14px 0}.go:disabled{opacity:.6}.status{min-height:42px;color:#ffe3ad;line-height:1.5;text-align:center}video{width:100%;margin-top:14px;border-radius:14px;background:#000}a{color:#ffd36c}.photo-preview{display:none;width:100%;max-height:260px;object-fit:contain;border-radius:12px;margin-top:10px;background:#101426}.pick{display:block;width:100%;padding:14px;border:1px dashed #ffd36c;border-radius:12px;background:#171c31;color:#fff;font:inherit;text-align:center}.notice{background:#352c1e;border:1px solid #8b6c35;border-radius:13px;padding:12px;color:#ffe5b2;font-size:13px;line-height:1.55}
 </style></head>
 <body><main class="app">
-<header class="head"><div class="logo">🎬🌍</div><h1>International 3D Cartoon Video Maker</h1><p class="sub">अपनी कहानी लिखें या मोबाइल के माइक से बोलें। वीडियो का प्रकार और लंबाई आप खुद चुनें।</p></header>
+<header class="head"><div class="logo">🎬🌍</div><h1>International 3D Cartoon Video Maker</h1><p class="sub">अपनी कहानी लिखें या मोबाइल के माइक से बोलें। केवल YouTube Shorts बनाएं — Vertical 9:16।</p></header>
 <section class="panel">
-<strong>वीडियो का प्रकार चुनें</strong>
-<div class="modes" style="margin-top:12px">
-<button type="button" class="mode active" id="shortMode"><b>📱 YouTube Shorts</b><small>Vertical · 9:16</small></button>
-<button type="button" class="mode" id="longMode"><b>🖥️ सामान्य वीडियो</b><small>Horizontal · 16:9</small></button>
-</div>
+<strong>📱 YouTube Shorts · Vertical 9:16</strong>
 <label class="field" for="duration">वीडियो की अवधि</label><select id="duration"></select>
 <p class="hint" id="formatHint">रोज़ का लक्ष्य: 5 Shorts · हर एक 30 सेकंड · Vertical 9:16</p>
 <label class="field" for="quality">वीडियो क्वालिटी</label>
@@ -31,20 +27,19 @@
 <button type="button" class="go" id="animatePhoto" style="background:linear-gradient(145deg,#8bd4ff,#4d9fe0);color:#071a2a">🖼️ चुनी तस्वीर को वीडियो बनाओ</button>
 <button type="button" id="dreamina" style="width:100%;border:1px solid #8bd4ff;border-radius:14px;padding:15px;background:#17334a;color:#e8f6ff;font:inherit;font-weight:800">🎬 Dreamina में कहानी बनाओ (बाहरी वेबसाइट)</button>
 <p class="hint">यह बटन आपकी कहानी कॉपी करके Dreamina खोलता है। वीडियो Dreamina में बनेगा, इस ऐप के अंदर सीधे नहीं।</p>
-<p class="status" id="status">रोज़ का लक्ष्य: 1 लंबा वीडियो और 5 Shorts।</p><div id="output"></div>
+<p class="status" id="status">रोज़ का लक्ष्य: 5 Shorts · Vertical 9:16।</p><div id="output"></div>
 </section>
-<div class="notice"><b>विकास की स्थिति:</b> अभी जुड़ा हुआ मुफ़्त AI इंजन केवल छोटी टेस्ट क्लिप बनाता है। चुनी हुई पूरी अवधि, कई सीन जोड़ना, संवाद/आवाज़ और सही Lip-sync अभी तैयार नहीं हैं। 1080p भी अभी लक्ष्य सेटिंग है, गारंटी नहीं। इन्हें जोड़ने के लिए अलग-अलग मुफ्त AI सुविधाओं की जाँच और इंटीग्रेशन बाकी है।</div>
+<div class="notice"><b>ज़रूरी जानकारी:</b> यह ऐप केवल YouTube Shorts (9:16) के लिए है। 30 सेकंड, 1, 2 और 3 मिनट अवधि चुन सकते हैं, लेकिन अभी मुफ़्त AI इंजन केवल छोटी टेस्ट क्लिप बनाता है؛ चुनी हुई पूरी अवधि, कई सीन, संवाद/आवाज़ और Lip-sync अभी समर्थित नहीं हैं। 1080p लक्ष्य है, गारंटी नहीं।</div>
 </main>
 <script>
 const photoInput=document.getElementById("photo"),photoPreview=document.getElementById("photoPreview");let selectedPhoto=null;
 document.getElementById("pickPhoto").addEventListener("click",()=>photoInput.click());
 photoInput.addEventListener("change",()=>{const file=photoInput.files?.[0];if(!file){selectedPhoto=null;photoPreview.style.display="none";return;}if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>6*1024*1024){alert("JPG, PNG या WEBP तस्वीर चुनें। आकार 6 MB से कम होना चाहिए।");photoInput.value="";return;}selectedPhoto=file;photoPreview.src=URL.createObjectURL(file);photoPreview.style.display="block";});
 const request=document.getElementById("request"),status=document.getElementById("status"),button=document.getElementById("make"),output=document.getElementById("output");
-const duration=document.getElementById("duration"),hint=document.getElementById("formatHint"),shortMode=document.getElementById("shortMode"),longMode=document.getElementById("longMode");
-let mode="shorts";
-function fillDurations(){duration.innerHTML="";const values=mode==="shorts"?[30]:[300,360,480,600,900,1200,1800,3600,7200,21600,43200];for(const s of values){const o=document.createElement("option");o.value=s;o.textContent=s<60?s+" सेकंड":(s%60===0?(s/60)+" मिनट":Math.floor(s/60)+" मिनट "+s%60+" सेकंड");if(s===(mode==="shorts"?30:300))o.selected=true;duration.append(o)}hint.textContent=mode==="shorts"?"रोज़ का लक्ष्य: 5 Shorts · हर एक 30 सेकंड · Vertical 9:16":"रोज़ का लक्ष्य: कम से कम 1 वीडियो · कम से कम 5 मिनट · Horizontal 16:9";}
-function setMode(next){mode=next;shortMode.classList.toggle("active",mode==="shorts");longMode.classList.toggle("active",mode==="long");fillDurations()}
-shortMode.addEventListener("click",()=>setMode("shorts"));longMode.addEventListener("click",()=>setMode("long"));fillDurations();
+const hint=document.getElementById("formatHint");
+const mode="shorts";
+function fillDurations(){duration.innerHTML="";const values=[30,60,120,180];for(const s of values){const o=document.createElement("option");o.value=s;o.textContent=s<60?s+" सेकंड":(s/60)+" मिनट";if(s===30)o.selected=true;duration.append(o)}hint.textContent="रोज़ का लक्ष्य: 5 Shorts · हर एक 30 सेकंड · Vertical 9:16";}
+fillDurations();
 
 document.getElementById("dreamina").addEventListener("click",async()=>{const story=request.value.trim();if(!story){status.textContent="पहले अपनी कहानी लिखें।";request.focus();return;}window.open("https://dreamina.capcut.com/","_blank","noopener");try{await navigator.clipboard.writeText("Create a cinematic 3D cartoon video based on this story. Keep character appearance consistent across scenes. Story: "+story);status.textContent="कहानी कॉपी हो गई। Dreamina में Create Video खोलकर पेस्ट करें।";}catch(e){status.textContent="Dreamina खुल गया। अपनी कहानी कॉपी करके वहाँ पेस्ट करें।";}});
 
