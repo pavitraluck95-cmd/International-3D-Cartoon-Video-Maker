@@ -28,6 +28,8 @@
 <div id="directorOutput" class="notice" style="display:none;white-space:pre-wrap;overflow-wrap:anywhere"></div>
 <p class="hint">AI Director कहानी, संवाद और हर सीन का अलग विज़ुअल प्रॉम्प्ट बनाएगा। यह अपने-आप वीडियो रेंडर नहीं करता। यह मुफ्त साझा AI सेवा है। प्रति IP प्रति घंटे उपयोग-सीमा है; व्यस्तता या HTTP 429 के कारण कभी-कभी काम रुक सकता है।</p>
 <button class="go" id="make">✨ AI से कार्टून वीडियो बनाओ</button>
+<button type="button" class="go" id="yapsVideo" style="background:linear-gradient(145deg,#a7efc1,#56c58b);color:#092416">🎞️ मुफ्त 30 सेकंड वीडियो बनाओ (Yaps)</button>
+<p class="hint">Yaps बिना अकाउंट, क्रेडिट या वॉटरमार्क के 30 सेकंड तक 720p वीडियो बनाता है। यह अलग वेबसाइट है, इस ऐप के अंदर नहीं चलता। कहानी 600 अक्षरों तक रखें। आपके फोन में आवाज़/वीडियो प्रोसेसिंग होगी; AI तस्वीरों के लिए WebGPU चाहिए, जो हर फोन में उपलब्ध नहीं है।</p>
 <button type="button" class="go" id="animatePhoto" style="background:linear-gradient(145deg,#8bd4ff,#4d9fe0);color:#071a2a">🖼️ चुनी तस्वीर को वीडियो बनाओ</button>
 <button type="button" id="dreamina" style="width:100%;border:1px solid #8bd4ff;border-radius:14px;padding:15px;background:#17334a;color:#e8f6ff;font:inherit;font-weight:800">🎬 Dreamina में कहानी बनाओ (बाहरी वेबसाइट)</button>
 <p class="hint">यह बटन आपकी कहानी कॉपी करके Dreamina खोलता है। वीडियो Dreamina में बनेगा, इस ऐप के अंदर सीधे नहीं।</p>
@@ -58,6 +60,8 @@ else{
 
 function fillDurations(){duration.innerHTML="";const values=[30,60,120,180];for(const s of values){const o=document.createElement("option");o.value=s;o.textContent=s<60?s+" सेकंड":(s/60)+" मिनट";if(s===30)o.selected=true;duration.append(o)}hint.textContent="रोज़ का लक्ष्य: 5 Shorts · हर एक 30 सेकंड · Vertical 9:16";}
 fillDurations();
+
+document.getElementById("yapsVideo").addEventListener("click",async()=>{const story=request.value.trim();if(!story){status.textContent="पहले 30 सेकंड की कहानी लिखें या AI Director से बनवाएँ।";request.focus();return;}if(story.length>600){status.textContent="Yaps में कहानी की सीमा 600 अक्षर है। कृपया कहानी छोटी करें।";request.focus();return;}const yapsUrl="https://www.yaps.ai/tools/script-to-video";window.open(yapsUrl,"_blank","noopener");try{await navigator.clipboard.writeText(story);status.textContent="कहानी कॉपी हो गई। Yaps में पेस्ट करें, 9:16 चुनें और Create the video दबाएँ।";}catch(e){status.textContent="Yaps खुल गया। कहानी कॉपी करके वहाँ पेस्ट करें, 9:16 चुनें और वीडियो बनाएँ।";}});
 
 document.getElementById("dreamina").addEventListener("click",async()=>{const story=request.value.trim();if(!story){status.textContent="पहले अपनी कहानी लिखें।";request.focus();return;}window.open("https://dreamina.capcut.com/","_blank","noopener");try{await navigator.clipboard.writeText("Create a cinematic 3D cartoon video based on this story. Keep character appearance consistent across scenes. Story: "+story);status.textContent="कहानी कॉपी हो गई। Dreamina में Create Video खोलकर पेस्ट करें।";}catch(e){status.textContent="Dreamina खुल गया। अपनी कहानी कॉपी करके वहाँ पेस्ट करें।";}});
 
