@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#17152b">
+<title>International 3D Cartoon Video Maker</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(145deg,#17152b,#202b46);color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:18px}.app{width:min(100%,560px);margin:0 auto}.head{text-align:center}.logo{font-size:48px}.app h1{font-size:clamp(25px,7vw,34px);margin:6px 0}.sub{color:#c8c9dc;line-height:1.55;margin:8px 0 20px}.panel{background:#ffffff0c;border:1px solid #ffffff25;border-radius:18px;padding:16px;margin:14px 0}.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mode{border:1px solid #ffffff38;border-radius:14px;background:#11182b;color:#fff;padding:14px 8px;font:inherit;text-align:center}.mode.active{border:2px solid #ffd36c;background:#3b3021}.mode b{display:block;font-size:16px}.mode small{color:#c8c9dc}.field{display:block;text-align:left;font-weight:700;margin:14px 0 7px}select,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid #ffffff35;background:#11182b;color:#fff;font:inherit;font-size:16px}textarea{min-height:120px;resize:vertical}option{background:#11182b}.hint{color:#c8c9dc;font-size:13px;line-height:1.5;margin:7px 0}.go{width:100%;border:0;border-radius:14px;padding:17px;background:linear-gradient(145deg,#ffd36c,#ffad28);color:#211805;font-size:19px;font-weight:850;margin:14px 0}.go:disabled{opacity:.6}.status{min-height:42px;color:#ffe3ad;line-height:1.5;text-align:center}video{width:100%;margin-top:14px;border-radius:14px;background:#000}a{color:#ffd36c}.photo-preview{display:none;width:100%;max-height:260px;object-fit:contain;border-radius:12px;margin-top:10px;background:#101426}.pick{display:block;width:100%;padding:14px;border:1px dashed #ffd36c;border-radius:12px;background:#171c31;color:#fff;font:inherit;text-align:center}.notice{background:#352c1e;border:1px solid #8b6c35;border-radius:13px;padding:12px;color:#ffe5b2;font-size:13px;line-height:1.55}
+</style></head>
+<body><main class="app">
+<header class="head"><div class="logo">🎬🌍</div><h1>International 3D Cartoon Video Maker</h1><p class="sub">अपनी कहानी लिखें या मोबाइल के माइक से बोलें। केवल YouTube Shorts बनाएं — Vertical 9:16।</p></header>
+<section class="panel">
+<a href="/editor" style="display:block;text-align:center;padding:14px;margin:0 0 14px;border-radius:12px;background:linear-gradient(145deg,#b9a5ff,#8064e8);color:#17102f;text-decoration:none;font-weight:900">✂️ Clipkit AI Video Editor खोलें · टाइमलाइन एडिट + MP4</a>
+<strong>📱 YouTube Shorts · Vertical 9:16</strong>
+<label class="field" for="duration">वीडियो की अवधि</label><select id="duration"></select>
+<p class="hint" id="formatHint">रोज़ का लक्ष्य: 4 Shorts · हर एक 30 सेकंड · Vertical 9:16</p>
+<p class="hint">वीडियो का वास्तविक आकार AI इंजन तय करेगा। अभी 720p या 1080p चुनने की सुविधा उपलब्ध नहीं है।</p>
+</section>
+<section class="panel">
+<label class="field" for="photo">🖼️ तस्वीर चुनें (नई सुविधा)</label>
+<input id="photo" type="file" accept="image/jpeg,image/png,image/webp" style="position:absolute;left:-9999px;width:1px;height:1px">
+<button type="button" class="pick" id="pickPhoto">📷 मोबाइल से तस्वीर चुनें</button>
+<img id="photoPreview" class="photo-preview" alt="चुनी हुई तस्वीर का प्रीव्यू">
+<p class="hint">JPG, PNG या WEBP · अधिकतम 6 MB। तस्वीर से लगभग 2 सेकंड की छोटी चलती क्लिप बनाने का प्रयास होगा।</p>
+<label class="field" for="request">कार्टून कहानी / दृश्य का विवरण</label>
+<textarea id="request" placeholder="उदाहरण: एक प्यारा 3D कार्टून बच्चा रंग-बिरंगे जंगल में तितलियों के पीछे दौड़ रहा है। कहानी मजेदार हो और चेहरे के भाव स्पष्ट हों।"></textarea>
+<button type="button" class="pick" id="speak" style="margin-top:10px">🎙️ माइक से कहानी बोलें</button>
+<p class="hint" id="micHint">माइक सुविधा समर्थित मोबाइल ब्राउज़र में काम करेगी। पहली बार माइक की अनुमति देनी पड़ सकती है।</p>
+<button type="button" class="go" id="director" style="background:linear-gradient(145deg,#b9a5ff,#8064e8);color:#17102f">🧠 AI Director से कहानी और 5 सीन बनवाओ</button>
+<div id="directorOutput" class="notice" style="display:none;white-space:pre-wrap;overflow-wrap:anywhere"></div>
+<p class="hint">AI Director कहानी, संवाद और हर सीन का अलग विज़ुअल प्रॉम्प्ट बनाएगा। यह अपने-आप वीडियो रेंडर नहीं करता। यह मुफ्त साझा AI सेवा है। प्रति IP प्रति घंटे उपयोग-सीमा है; व्यस्तता या HTTP 429 के कारण कभी-कभी काम रुक सकता है।</p>
+<button class="go" id="make">✨ AI से कार्टून वीडियो बनाओ</button>
+<button type="button" class="go" id="yapsVideo" style="background:linear-gradient(145deg,#a7efc1,#56c58b);color:#092416">🎞️ मुफ्त 30 सेकंड वीडियो बनाओ (Yaps)</button>
+<p class="hint">Yaps बिना अकाउंट, क्रेडिट या वॉटरमार्क के 30 सेकंड तक 720p वीडियो बनाता है। यह अलग वेबसाइट है, इस ऐप के अंदर नहीं चलता। कहानी 600 अक्षरों तक रखें। आपके फोन में आवाज़/वीडियो प्रोसेसिंग होगी; AI तस्वीरों के लिए WebGPU चाहिए, जो हर फोन में उपलब्ध नहीं है।</p>
+<button type="button" class="go" id="animatePhoto" style="background:linear-gradient(145deg,#8bd4ff,#4d9fe0);color:#071a2a">🖼️ चुनी तस्वीर को वीडियो बनाओ</button>
+<button type="button" id="dreamina" style="width:100%;border:1px solid #8bd4ff;border-radius:14px;padding:15px;background:#17334a;color:#e8f6ff;font:inherit;font-weight:800">🎬 Dreamina में कहानी बनाओ (बाहरी वेबसाइट)</button>
+<p class="hint">यह बटन आपकी कहानी कॉपी करके Dreamina खोलता है। वीडियो Dreamina में बनेगा, इस ऐप के अंदर सीधे नहीं।</p>
+<p class="status" id="status">रोज़ का लक्ष्य: 4 Shorts · Vertical 9:16।</p><div id="output"></div>
+</section>
+<div class="notice"><b>AI Director की गोपनीयता:</b> कहानी और प्रॉम्प्ट Vireonix AI सेवा को भेजे जाते हैं। उसकी शर्तों के अनुसार इनपुट, आउटपुट और चैट रिकॉर्ड सेवा सुधार व मॉडल प्रशिक्षण के लिए रखे और इस्तेमाल किए जा सकते हैं। पासवर्ड, निजी जानकारी या गोपनीय सामग्री न लिखें। सेवा मुफ्त है, लेकिन प्रति IP प्रति घंटे सीमा और उपलब्धता की गारंटी नहीं है। <a href="https://vireonix.ai/terms" target="_blank" rel="noopener">Vireonix की शर्तें पढ़ें</a>।</div>
+<div class="notice"><b>ज़रूरी जानकारी:</b> यह ऐप Shorts बनाने के लिए है, लेकिन AI इंजन अभी केवल छोटी टेस्ट क्लिप देता है; चुनी हुई पूरी अवधि, कई सीन, संवाद/आवाज़, Lip-sync और सही 9:16 आउटपुट की गारंटी अभी नहीं है। 720p/1080p चयन भी उपलब्ध नहीं है। तस्वीर से वीडियो बनाने पर आपकी चुनी तस्वीर बाहरी Hugging Face AI सेवा को भेजी जाती है; निजी या संवेदनशील तस्वीर अपलोड न करें।</div>
+</main>
+<script>
+const photoInput=document.getElementById("photo"),photoPreview=document.getElementById("photoPreview");let selectedPhoto=null;
+document.getElementById("pickPhoto").addEventListener("click",()=>photoInput.click());
+photoInput.addEventListener("change",()=>{const file=photoInput.files?.[0];if(!file){selectedPhoto=null;photoPreview.style.display="none";return;}if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>6*1024*1024){alert("JPG, PNG या WEBP तस्वीर चुनें। आकार 6 MB से कम होना चाहिए।");photoInput.value="";return;}selectedPhoto=file;photoPreview.src=URL.createObjectURL(file);photoPreview.style.display="block";});
+const request=document.getElementById("request"),status=document.getElementById("status"),button=document.getElementById("make"),output=document.getElementById("output");
+const hint=document.getElementById("formatHint");
+const mode="shorts";
+const speakButton=document.getElementById("speak"),micHint=document.getElementById("micHint");
+const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SpeechRecognition){speakButton.disabled=true;speakButton.textContent="🎙️ इस ब्राउज़र में माइक उपलब्ध नहीं";micHint.textContent="कृपया Chrome के ऐसे संस्करण में खोलें जो बोलकर लिखने की सुविधा देता हो, या कहानी टाइप करें。";}
+else{
+ const recognition=new SpeechRecognition();recognition.lang="hi-IN";recognition.continuous=false;recognition.interimResults=true;
+ let listening=false;
+ speakButton.addEventListener("click",()=>{if(listening){recognition.stop();return;}try{recognition.start();}catch(e){micHint.textContent="माइक पहले से चालू है।";}});
+ recognition.onstart=()=>{listening=true;speakButton.textContent="⏹️ बोलना बंद करें";micHint.textContent="अब अपनी कहानी बोलें…";};
+ recognition.onresult=(event)=>{let finalText="";for(let i=0;i<event.results.length;i++){const phrase=event.results[i][0].transcript;if(event.results[i].isFinal)finalText+=phrase;}if(finalText)request.value=(request.value.trim()?request.value.trim()+" ":"")+finalText;};
+ recognition.onerror=(event)=>{micHint.textContent=event.error==="not-allowed"?"माइक की अनुमति नहीं मिली। ब्राउज़र सेटिंग में अनुमति दें।":"आवाज़ पहचान नहीं हो पाई। दोबारा कोशिश करें या कहानी टाइप करें।";};
+ recognition.onend=()=>{listening=false;speakButton.textContent="🎙️ माइक से कहानी बोलें";if(micHint.textContent==="अब अपनी कहानी बोलें…")micHint.textContent="आपकी बोली हुई कहानी टेक्स्ट बॉक्स में जुड़ गई है।";};
+}
+
+function fillDurations(){duration.innerHTML="";const values=[30,60,120,180];for(const s of values){const o=document.createElement("option");o.value=s;o.textContent=s<60?s+" सेकंड":(s/60)+" मिनट";if(s===30)o.selected=true;duration.append(o)}hint.textContent="रोज़ का लक्ष्य: 4 Shorts · हर एक 30 सेकंड · Vertical 9:16";}
+fillDurations();
+
+document.getElementById("yapsVideo").addEventListener("click",async()=>{const story=request.value.trim();if(!story){status.textContent="पहले 30 सेकंड की कहानी लिखें या AI Director से बनवाएँ।";request.focus();return;}if(story.length>600){status.textContent="Yaps में कहानी की सीमा 600 अक्षर है। कृपया कहानी छोटी करें।";request.focus();return;}const yapsUrl="https://www.yaps.ai/tools/script-to-video";window.open(yapsUrl,"_blank","noopener");try{await navigator.clipboard.writeText(story);status.textContent="कहानी कॉपी हो गई। Yaps में पेस्ट करें, 9:16 चुनें और Create the video दबाएँ।";}catch(e){status.textContent="Yaps खुल गया। कहानी कॉपी करके वहाँ पेस्ट करें, 9:16 चुनें और वीडियो बनाएँ।";}});
+
+document.getElementById("dreamina").addEventListener("click",async()=>{const story=request.value.trim();if(!story){status.textContent="पहले अपनी कहानी लिखें।";request.focus();return;}window.open("https://dreamina.capcut.com/","_blank","noopener");try{await navigator.clipboard.writeText("Create a cinematic 3D cartoon video based on this story. Keep character appearance consistent across scenes. Story: "+story);status.textContent="कहानी कॉपी हो गई। Dreamina में Create Video खोलकर पेस्ट करें।";}catch(e){status.textContent="Dreamina खुल गया। अपनी कहानी कॉपी करके वहाँ पेस्ट करें।";}});
+
+document.getElementById("animatePhoto").addEventListener("click",async()=>{
+ const prompt=request.value.trim();
+ if(!selectedPhoto){status.textContent="पहले मोबाइल से एक तस्वीर चुनें।";photoInput.click();return;}
+ if(!prompt){status.textContent="तस्वीर में क्या होना चाहिए, उसका विवरण लिखें।";request.focus();return;}
+ button.disabled=true;document.getElementById("animatePhoto").disabled=true;output.innerHTML="";status.textContent="तस्वीर मुफ्त Wan 2.2 AI इंजन को भेजी जा रही है। GPU की कतार में समय लग सकता है…";
+ try{
+  const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(selectedPhoto);});
+  const response=await fetch("/api/animate-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt,imageData:dataUrl,mimeType:selectedPhoto.type})});
+  const data=await response.json();if(!response.ok)throw new Error(data.error||"तस्वीर से वीडियो नहीं बन पाया।");
+  const video=document.createElement("video");video.controls=true;video.playsInline=true;video.src=data.videoUrl;
+  const link=document.createElement("a");link.href=data.videoUrl;link.target="_blank";link.rel="noopener";link.textContent="तस्वीर से बनी क्लिप खोलें / डाउनलोड करें";
+  output.append(video,document.createElement("br"),link);status.textContent="तस्वीर से छोटी क्लिप तैयार है। यह पूरी 5 मिनट की वीडियो नहीं है।";
+ }catch(error){status.textContent=error.message||"मुफ्त इंजन से संपर्क नहीं हो पाया।";}
+ finally{button.disabled=false;document.getElementById("animatePhoto").disabled=false;}
+});
+
+document.getElementById("director").addEventListener("click",async()=>{
+ const idea=request.value.trim();
+ const panel=document.getElementById("directorOutput");
+ if(!idea){status.textContent="पहले कहानी का विचार लिखें या माइक से बोलें।";request.focus();return;}
+ const directorButton=document.getElementById("director");
+ directorButton.disabled=true;panel.style.display="block";panel.textContent="AI Director आपकी कहानी और 5 सीन तैयार कर रहा है…";
+ try{
+  const response=await fetch("/api/ai-director",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({idea})});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||"AI Director अभी जवाब नहीं दे पाया।");
+  panel.textContent=data.plan;
+  status.textContent="AI Director का स्टोरीबोर्ड तैयार है। इसे वीडियो बनाने के लिए सीन के प्रॉम्प्ट इस्तेमाल करें।";
+ }catch(error){panel.textContent=error.message||"मुफ्त AI Director अभी उपलब्ध नहीं है।";status.textContent="AI Director अनुरोध पूरा नहीं हुआ।";}
+ finally{directorButton.disabled=false;}
+});
+button.addEventListener("click",async()=>{const prompt=request.value.trim();if(!prompt){status.textContent="पहले कहानी या दृश्य लिखें।";request.focus();return;}button.disabled=true;output.innerHTML="";status.textContent="AI इंजन एक छोटी टेस्ट क्लिप बना रहा है…";try{const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt,mode,durationSeconds:Number(duration.value)})});const data=await response.json();if(!response.ok)throw new Error(data.error||"वीडियो नहीं बन पाई।");const video=document.createElement("video");video.controls=true;video.playsInline=true;video.src=data.videoUrl;const link=document.createElement("a");link.href=data.videoUrl;link.target="_blank";link.rel="noopener";link.textContent="टेस्ट क्लिप खोलें / डाउनलोड करें";output.append(video,document.createElement("br"),link);status.textContent="टेस्ट क्लिप तैयार है। चुनी हुई पूरी अवधि अभी समर्थित नहीं है।";}catch(error){status.textContent=error.message||"कुछ गड़बड़ हुई। फिर कोशिश करें।";}finally{button.disabled=false;}});
+</script></body></html>
