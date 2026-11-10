@@ -73,6 +73,9 @@ jobs:
               super.onCreate(savedInstanceState);
               getBridge().getWebView().addJavascriptInterface(new GallerySaver(), "AndroidSaveVideo");
               getBridge().getWebView().addJavascriptInterface(new NativeSpeech(), "AndroidTTS");
+              // The WebView may have started loading during BridgeActivity.onCreate().
+              // Reload once after registering JS interfaces so AndroidTTS is exposed to page JS.
+              getBridge().getWebView().post(() -> getBridge().getWebView().reload());
               hindiTts = new TextToSpeech(this, status -> {
                 if (status == TextToSpeech.SUCCESS) {
                   int lang = hindiTts.setLanguage(new Locale("hi", "IN"));
