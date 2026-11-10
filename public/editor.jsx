@@ -126,12 +126,26 @@ function App() {
         renderResolution: request.resolution || "source",
         onProgress: value => setProgress(value)
       });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "international-2d-comedy-story.mp4";
-      document.body.appendChild(a); a.click(); a.remove();
-      setStatus("MP4 तैयार है और डाउनलोड शुरू हो गया।");
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      const filename = "international-2d-comedy-story.mp4";
+      if (window.AndroidSaveVideo && typeof window.AndroidSaveVideo.saveVideo === "function") {
+        setStatus("MP4 फोन की Gallery में सेव हो रही है…");
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let binary = "";
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+        const saved = window.AndroidSaveVideo.saveVideo(btoa(binary), filename);
+        if (!saved) throw new Error("फोन की Gallery में MP4 सेव नहीं हो पाई।");
+        setStatus("MP4 फोन की Gallery → Movies → International 2D Cartoon Video Maker में सेव हो गई।");
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setStatus("MP4 तैयार है। डाउनलोड शुरू हुआ; फोन के Downloads में देखें।");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
     } catch (error) {
       setStatus("MP4 export नहीं हो पाया: " + (error.message || "अज्ञात समस्या"));
     } finally {
