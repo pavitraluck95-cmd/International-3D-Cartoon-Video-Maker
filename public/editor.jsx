@@ -61,6 +61,35 @@ function makeProject(idea = "", story = null, narrationDataUrl = null) {
     background_color: "#111827", elements
   };
 }
+
+const VIDEO_DB_NAME = "international-2d-video-library";
+function openVideoLibrary() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(VIDEO_DB_NAME, 1);
+    request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains("videos")) request.result.createObjectStore("videos", {keyPath:"id"}); };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("सेव बॉक्स नहीं खुला।"));
+  });
+}
+async function saveVideoToLibrary(blob, name, duration) {
+  const db = await openVideoLibrary();
+  await new Promise((resolve,reject) => {
+    const tx=db.transaction("videos","readwrite");
+    tx.objectStore("videos").put({id:Date.now().toString(),name,blob,duration,savedAt:new Date().toISOString()});
+    tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+  }); db.close();
+}
+async function readVideoLibrary() {
+  const db=await openVideoLibrary();
+  const items=await new Promise((resolve,reject)=>{const tx=db.transaction("videos","readonly");const q=tx.objectStore("videos").getAll();q.onsuccess=()=>resolve(q.result||[]);q.onerror=()=>reject(q.error);});
+  db.close(); return items.sort((a,b)=>String(b.savedAt).localeCompare(String(a.savedAt)));
+}
+async function removeVideoFromLibrary(id) {
+  const db=await openVideoLibrary();
+  await new Promise((resolve,reject)=>{const tx=db.transaction("videos","readwrite");tx.objectStore("videos").delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+  db.close();
+}
+
 let nativeTtsChunks = {};
 window.onNativeTtsChunk = (id, chunk, last) => {
   const entry = nativeTtsChunks[id];
@@ -99,9 +128,13 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState("एक क्लिक: AI कहानी + डायलॉग + 2D तस्वीरें → Clipkit टाइमलाइन → MP4 Gallery सेव।");
+  const [status, setStatus] = useState("एक क्लिक: AI कहानी + डायलॉग + 2D तस्वीरें → MP4 → ऐप का सेव बॉक्स।");
   const [storyInfo, setStoryInfo] = useState(null);
   const assetStore = useMemo(() => createLocalAssetStore(), []);
+  const [savedVideos,setSavedVideos]=useState([]);
+  useEffect(()=>{readVideoLibrary().then(setSavedVideos).catch(e=>setStatus("सेव बॉक्स नहीं खुला: "+e.message));},[]);
+  async function refreshSavedVideos(){setSavedVideos(await readVideoLibrary());}
+  function downloadSavedVideo(item){const url=URL.createObjectURL(item.blob);const a=document.createElement("a");a.href=url;a.download=item.name||"cartoon-video.mp4";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 
   async function createWholeCartoon() {
     if (!idea.trim()) setIdea("चालाक पप्पू और भूतिया लड्डू: गाँव में पप्पू को एक ऐसा लड्डू मिलता है जिसे खाते ही अजीब-अजीब आवाज़ें निकलती हैं।");
@@ -118,7 +151,7 @@ function App() {
       let narration = null;
       if (window.AndroidTTS) {
         setStatus("चरण 3/5: फोन की हिंदी आवाज़ में डायलॉग तैयार हो रहे हैं…");
-        narration = await makeHindiNarration(data);
+        try { narration = await makeHindiNarration(data); } catch (ttsError) { narration = null; setStatus("हिंदी आवाज़ नहीं बन सकी: " + ttsError.message + " — वीडियो की तैयारी जारी है।"); }
       }
       const next = makeProject(idea.trim() || data.title, data, narration);
       setProject(next); setProjectKey(k => k + 1);
@@ -163,36 +196,11 @@ function App() {
         onProgress: value => setProgress(value)
       });
       const filename = "international-2d-comedy-story.mp4";
-      if (window.AndroidSaveVideo && typeof window.AndroidSaveVideo.beginSave === "function") {
-        setStatus("MP4 फोन की Gallery में सेव हो रही है…");
-        if (!window.AndroidSaveVideo.beginSave(filename)) throw new Error("Gallery में MP4 फ़ाइल नहीं बन पाई।");
-        try {
-          const bytes = new Uint8Array(await blob.arrayBuffer());
-          const chunkSize = 256 * 1024;
-          for (let i = 0; i < bytes.length; i += chunkSize) {
-            let binary = "";
-            const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-            for (let j = 0; j < chunk.length; j += 0x8000) {
-              binary += String.fromCharCode(...chunk.subarray(j, Math.min(j + 0x8000, chunk.length)));
-            }
-            if (!window.AndroidSaveVideo.appendChunk(btoa(binary))) throw new Error("Gallery में MP4 डेटा सेव नहीं हो पाया।");
-            setProgress(Math.min(0.99, (i + chunk.length) / bytes.length));
-          }
-          if (!window.AndroidSaveVideo.finishSave()) throw new Error("Gallery में MP4 फ़ाइल पूरी नहीं हो पाई।");
-        } catch (saveError) {
-          window.AndroidSaveVideo.cancelSave();
-          throw saveError;
-        }
-        setStatus("MP4 सेव हो गई। अब Gallery खोली जा रही है…");
-        if (typeof window.AndroidSaveVideo.openGallery === "function") window.AndroidSaveVideo.openGallery();
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = filename;
-        document.body.appendChild(a); a.click(); a.remove();
-        setStatus("MP4 तैयार है। डाउनलोड शुरू हुआ; फोन के Downloads में देखें।");
-        setTimeout(() => URL.revokeObjectURL(url), 60000);
-      }
+      setStatus("MP4 तैयार हुई है। ऐप के सेव बॉक्स में सुरक्षित की जा रही है…");
+      await saveVideoToLibrary(blob, filename, source.duration || 600);
+      await refreshSavedVideos();
+      setProgress(1);
+      setStatus("MP4 ऐप के ‘मेरे सेव किए वीडियो’ बॉक्स में जमा हो गई है। वहाँ से आप खुद डाउनलोड कर सकते हैं.");
     } catch (error) {
       setStatus("MP4 export नहीं हो पाया: " + (error.message || "अज्ञात समस्या"));
     } finally {
@@ -201,7 +209,15 @@ function App() {
   }
 
   return <div className="editor-app">
-    {isOneClick && <section style={{padding:"32px 20px",textAlign:"center",maxWidth:560,margin:"12vh auto"}}><div style={{fontSize:48}}>🎬</div><h2>आपकी 2D वीडियो तैयार हो रही है</h2><p style={{color:"#ffe1a0",lineHeight:1.7}}>{rendering ? "MP4 बन रही है: " + Math.round(progress * 100) + "%" : status}</p><p style={{color:"#aebbd0",fontSize:13}}>कृपया ऐप खुला रखें। वीडियो सेव होने पर Gallery खोलने की कोशिश होगी।</p></section>}
+    {isOneClick && <section style={{padding:"32px 20px",textAlign:"center",maxWidth:560,margin:"12vh auto"}}><div style={{fontSize:48}}>🎬</div><h2>आपकी 2D वीडियो तैयार हो रही है</h2><p style={{color:"#ffe1a0",lineHeight:1.7}}>{rendering ? "MP4 बन रही है: " + Math.round(progress * 100) + "%" : status}</p><p style={{color:"#aebbd0",fontSize:13}}>कृपया ऐप खुला रखें। MP4 तैयार होने पर इसी ऐप के सेव बॉक्स में जमा होगी।</p></section>}
+    <section style={{maxWidth:900,margin:"18px auto",padding:18,border:"1px solid #46536a",borderRadius:14,background:"#111827"}}>
+<h3>📁 मेरे सेव किए वीडियो ({savedVideos.length})</h3>
+{savedVideos.length===0?<p>अभी कोई तैयार MP4 नहीं है।</p>:savedVideos.map(item=><div key={item.id} style={{padding:"12px 0",borderTop:"1px solid #374151"}}>
+<strong>{item.name}</strong><small style={{display:"block",opacity:.75}}>{new Date(item.savedAt).toLocaleString("hi-IN")} · MP4</small>
+<video controls playsInline preload="metadata" src={URL.createObjectURL(item.blob)} style={{display:"block",width:"100%",maxHeight:260,marginTop:8}}/>
+<button onClick={()=>downloadSavedVideo(item)}>⬇️ MP4 डाउनलोड करें</button>
+<button className="reset" onClick={async()=>{await removeVideoFromLibrary(item.id);await refreshSavedVideos();}}>हटाएँ</button>
+</div>)}</section>
     {!isOneClick && <>
     <header className="editor-header">
       <a href="/" className="back-link">← मुख्य ऐप</a>
@@ -217,7 +233,7 @@ function App() {
       </div>
       <p className="editor-status">{rendering ? "MP4 export: " + Math.round(progress * 100) + "%" : status}</p>
       {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · 2D तस्वीरें: {storyInfo.imagesCreated || 0}/10</p>}
-      <p className="editor-note">एक क्लिक पर AI Director कहानी और डायलॉग लिखेगा, 10 2D तस्वीरें बनाएगा, Clipkit टाइमलाइन में लगाएगा और MP4 export करके Gallery में सेव करने की कोशिश करेगा। यह संस्करण 2D तस्वीरों, डायलॉग कैप्शन और समर्थित Android फोन पर हिंदी Text-to-Speech narration को जोड़ता है; पात्रों की पूरी frame-by-frame animation और बैकग्राउंड संगीत अभी शामिल नहीं हैं। मुफ्त सार्वजनिक Image AI की कतार/सीमा के कारण generation की गारंटी नहीं है।</p>
+      <p className="editor-note">एक क्लिक पर AI Director कहानी और डायलॉग लिखेगा, 10 2D तस्वीरें बनाएगा, Clipkit टाइमलाइन में लगाएगा और MP4 export करके ऐप के सेव बॉक्स में जमा करेगा। यह संस्करण 2D तस्वीरों, डायलॉग कैप्शन और समर्थित Android फोन पर हिंदी Text-to-Speech narration को जोड़ता है; पात्रों की पूरी frame-by-frame animation और बैकग्राउंड संगीत अभी शामिल नहीं हैं। मुफ्त सार्वजनिक Image AI की कतार/सीमा के कारण generation की गारंटी नहीं है।</p>
     </section>
     <main className="clipkit-shell">
       <Editor key={projectKey} initialSource={project}
