@@ -125,6 +125,17 @@ jobs:
               }
 
               @JavascriptInterface
+              public synchronized void openGallery() {
+                try {
+                  android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                  intent.setDataAndType(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*");
+                  intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                  intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                  startActivity(intent);
+                } catch (Exception ignored) {}
+              }
+
+              @JavascriptInterface
               public synchronized void cancelSave() { cancelSaveInternal(); }
 
               private void cancelSaveInternal() {
