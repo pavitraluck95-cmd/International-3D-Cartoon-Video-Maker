@@ -1,6 +1,6 @@
 {
-  "name": "international-3d-cartoon-video-maker",
-  "version": "1.1.1",
+  "name": "international-2d-cartoon-video-maker",
+  "version": "1.1.2",
   "private": true,
   "engines": {
     "node": ">=20"
