@@ -3,6 +3,19 @@ const path = require("path");
 const app = express();
 const port = process.env.PORT || 3000;
 app.use(express.json({ limit: "10mb" }));
+app.use((req, res, next) => {
+  const origin = req.headers.origin || "";
+  const allowed = ["capacitor://localhost", "http://localhost", "https://localhost", "https://international-3d-cartoon-video-maker.onrender.com"];
+  if (allowed.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  }
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
 const publicDir = path.join(__dirname, "public");
 const distDir = path.join(__dirname, "dist");
 app.use(express.static(distDir));
