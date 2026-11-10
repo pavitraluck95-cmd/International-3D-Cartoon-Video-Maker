@@ -68,23 +68,23 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState("कहानी लिखें या माइक से बोलें। AI 2D कॉमेडी कहानी, डायलॉग, तस्वीरें और Clipkit टाइमलाइन तैयार करेगा।");
+  const [status, setStatus] = useState("एक क्लिक में 10 मिनट की हिंदी 2D कॉमेडी कहानी, दृश्य और Clipkit टाइमलाइन।");
   const [storyInfo, setStoryInfo] = useState(null);
   const assetStore = useMemo(() => createLocalAssetStore(), []);
 
   async function createWholeCartoon() {
-    if (!idea.trim()) { setStatus("पहले कहानी का विषय लिखें या बोलें।"); return; }
+    if (!idea.trim()) setIdea("चालाक पप्पू और भूतिया लड्डू: गाँव में पप्पू को एक ऐसा लड्डू मिलता है जिसे खाते ही अजीब-अजीब आवाज़ें निकलती हैं।");
     setBusy(true); setStoryInfo(null);
     setStatus("पहला चरण: AI 10 मिनट की 2D कॉमेडी कहानी और डायलॉग लिख रहा है…");
     try {
       const response = await fetch("/api/ai-movie", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea: idea.trim() })
+        body: JSON.stringify({ idea: (idea.trim() || "चालाक पप्पू और भूतिया लड्डू: गाँव में पप्पू को एक ऐसा लड्डू मिलता है जिसे खाते ही अजीब-अजीब आवाज़ें निकलती हैं।") })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "AI अभी उपलब्ध नहीं है।");
       setStatus("दूसरा चरण: " + (data.imagesCreated || 0) + "/10 2D तस्वीरें बनीं। Clipkit टाइमलाइन तैयार हो रही है…");
-      const next = makeProject(idea.trim(), data);
+      const next = makeProject(idea.trim() || data.title, data);
       setProject(next); setProjectKey(k => k + 1);
       setStoryInfo(data);
       setStatus(data.complete
@@ -95,7 +95,7 @@ function App() {
         else setStatus("सभी 10 तस्वीरें नहीं बनीं, इसलिए पूरी MP4 export नहीं की गई।");
       }
     } catch (error) {
-      setStatus(error.message || "AI कहानी/तस्वीरें तैयार नहीं कर पाया।");
+      setStatus(error.message || "मुफ्त AI कहानी/2D तस्वीरें तैयार नहीं कर पाया।");
     } finally { setBusy(false); }
   }
 
