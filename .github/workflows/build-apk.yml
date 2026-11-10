@@ -40,6 +40,106 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Add native Android Gallery saver
+        run: |
+          mkdir -p android/app/src/main/java/com/international3dcartoon/videomaker
+          cat > android/app/src/main/java/com/international3dcartoon/videomaker/MainActivity.java <<'JAVA'
+          package com.international3dcartoon.videomaker;
+
+          import android.content.ContentValues;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.os.Environment;
+          import android.provider.MediaStore;
+          import android.util.Base64;
+          import android.webkit.JavascriptInterface;
+          import com.getcapacitor.BridgeActivity;
+          import java.io.OutputStream;
+
+          public class MainActivity extends BridgeActivity {
+            @Override
+            public void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              getBridge().getWebView().addJavascriptInterface(new GallerySaver(), "AndroidSaveVideo");
+            }
+
+            public class GallerySaver {
+              private Uri pendingUri;
+              private OutputStream pendingOutput;
+
+              @JavascriptInterface
+              public synchronized boolean beginSave(String filename) {
+                try {
+                  cancelSaveInternal();
+                  String safeName = (filename == null || !filename.endsWith(".mp4"))
+                    ? "cartoon-video.mp4" : filename.replaceAll("[^A-Za-z0-9._-]", "_");
+                  ContentValues values = new ContentValues();
+                  values.put(MediaStore.Video.Media.DISPLAY_NAME, safeName);
+                  values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4");
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    values.put(MediaStore.Video.Media.RELATIVE_PATH,
+                      Environment.DIRECTORY_MOVIES + "/International 2D Cartoon Video Maker");
+                    values.put(MediaStore.Video.Media.IS_PENDING, 1);
+                  }
+                  pendingUri = getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values);
+                  if (pendingUri == null) return false;
+                  pendingOutput = getContentResolver().openOutputStream(pendingUri, "w");
+                  if (pendingOutput == null) { cancelSaveInternal(); return false; }
+                  return true;
+                } catch (Exception error) {
+                  cancelSaveInternal();
+                  return false;
+                }
+              }
+
+              @JavascriptInterface
+              public synchronized boolean appendChunk(String base64) {
+                try {
+                  if (pendingOutput == null || base64 == null) return false;
+                  pendingOutput.write(Base64.decode(base64, Base64.DEFAULT));
+                  return true;
+                } catch (Exception error) {
+                  return false;
+                }
+              }
+
+              @JavascriptInterface
+              public synchronized boolean finishSave() {
+                try {
+                  if (pendingOutput == null || pendingUri == null) return false;
+                  pendingOutput.flush();
+                  pendingOutput.close();
+                  pendingOutput = null;
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContentValues ready = new ContentValues();
+                    ready.put(MediaStore.Video.Media.IS_PENDING, 0);
+                    getContentResolver().update(pendingUri, ready, null, null);
+                  }
+                  pendingUri = null;
+                  return true;
+                } catch (Exception error) {
+                  cancelSaveInternal();
+                  return false;
+                }
+              }
+
+              @JavascriptInterface
+              public synchronized void cancelSave() { cancelSaveInternal(); }
+
+              private void cancelSaveInternal() {
+                try { if (pendingOutput != null) pendingOutput.close(); } catch (Exception ignored) {}
+                pendingOutput = null;
+                if (pendingUri != null) {
+                  try { getContentResolver().delete(pendingUri, null, null); } catch (Exception ignored) {}
+                }
+                pendingUri = null;
+              }
+            }
+          }
+          JAVA
+          grep -q 'MainActivity' android/app/src/main/AndroidManifest.xml
+
       - name: Build debug APK
         working-directory: android
         run: |
