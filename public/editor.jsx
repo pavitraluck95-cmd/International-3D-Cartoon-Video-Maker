@@ -14,7 +14,7 @@ function makeProject(idea = "", story = null) {
   const elements = [
     { id: "background", type: "shape", layer: 1, shape: "rectangle",
       x: 0, y: 0, width: 720, height: 1280, fill_color: "#111827",
-      time: 0, duration: Math.max(3, (story && story.durationSeconds) || 15) },
+      time: 0, duration: Math.max(3, (story && story.durationSeconds) || 600) },
     { id: "main-title", type: "text", layer: 20, time: 0, duration: 3,
       x: 360, y: 110, x_anchor: 0.5, y_anchor: 0.5, width: 660, height: 140,
       text: String(story && story.title || idea || "मेरी नई कार्टून कहानी").slice(0, 80),
@@ -24,7 +24,7 @@ function makeProject(idea = "", story = null) {
       background_border_radius: 18 }
   ];
   let cursor = 0;
-  scenes.slice(0, 5).forEach((scene, i) => {
+  scenes.slice(0, 10).forEach((scene, i) => {
     const clipDuration = scene.video ? 3 : 0;
     if (scene.video) {
       elements.push({
@@ -44,16 +44,16 @@ function makeProject(idea = "", story = null) {
     const caption = [scene.visual, scene.dialogue].filter(Boolean).join("\n");
     elements.push({
       id: "scene-caption-" + (i + 1), type: "text", layer: 3,
-      time: cursor, duration: 3, x: 360, y: 1080,
+      time: cursor, duration: 60, x: 360, y: 1080,
       x_anchor: 0.5, y_anchor: 0.5, width: 660, height: 260,
       text: caption.slice(0, 280), font_family: "Inter",
       font_size: 28, font_weight: 700, fill_color: "#ffffff",
       text_align: "center", background_color: "#101827",
       background_padding: [18, 18], background_border_radius: 18
     });
-    cursor += 3;
+    cursor += 60;
   });
-  const totalDuration = Math.max(3, cursor || 15);
+  const totalDuration = Math.max(600, cursor || 600);
   return {
     clipkit_version: "1.0", output_format: "mp4",
     width: 720, height: 1280, duration: totalDuration, frame_rate: 30,
@@ -68,14 +68,14 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState("कहानी लिखें या माइक से बोलें। AI कहानी, चलती 3D-स्टाइल वीडियो क्लिप और Clipkit टाइमलाइन तैयार करेगा।");
+  const [status, setStatus] = useState("कहानी लिखें या माइक से बोलें। AI 2D कॉमेडी कहानी, डायलॉग, तस्वीरें और Clipkit टाइमलाइन तैयार करेगा।");
   const [storyInfo, setStoryInfo] = useState(null);
   const assetStore = useMemo(() => createLocalAssetStore(), []);
 
   async function createWholeCartoon() {
     if (!idea.trim()) { setStatus("पहले कहानी का विषय लिखें या बोलें।"); return; }
     setBusy(true); setStoryInfo(null);
-    setStatus("पहला चरण: AI कहानी और किरदार तय कर रहा है…");
+    setStatus("पहला चरण: AI 10 मिनट की 2D कॉमेडी कहानी और डायलॉग लिख रहा है…");
     try {
       const response = await fetch("/api/ai-movie", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -83,7 +83,7 @@ function App() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "AI अभी उपलब्ध नहीं है।");
-      setStatus("दूसरा चरण: " + (data.videosCreated || 0) + "/5 चलती वीडियो क्लिप बनीं। Clipkit टाइमलाइन तैयार हो रही है…");
+      setStatus("दूसरा चरण: " + (data.imagesCreated || 0) + "/10 2D तस्वीरें बनीं। Clipkit टाइमलाइन तैयार हो रही है…");
       const next = makeProject(idea.trim(), data);
       setProject(next); setProjectKey(k => k + 1);
       setStoryInfo(data);
@@ -142,19 +142,19 @@ function App() {
   return <div className="editor-app">
     <header className="editor-header">
       <a href="/" className="back-link">← मुख्य ऐप</a>
-      <div><strong>🎬 International 3D Cartoon Video Maker</strong><small>AI Story + Cartoon Images + Clipkit Editor</small></div>
+      <div><strong>🎬 International 3D Cartoon Video Maker</strong><small>2D Comedy Story + Dialogues + Pictures + Clipkit</small></div>
     </header>
     <section className="director-bar">
       <label htmlFor="story">अपनी कहानी लिखें या बोलें</label>
       <textarea id="story" value={idea} onChange={e => setIdea(e.target.value)}
         placeholder="उदाहरण: एक छोटा हाथी जंगल में खोए अपने दोस्त को ढूँढता है…" />
       <div className="director-actions">
-        <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "✨ पूरी कार्टून वीडियो तैयार करो"}</button>
-        <button className="reset" onClick={() => { setProject(makeProject(idea)); setProjectKey(k => k + 1); setStoryInfo(null); setStatus("नई खाली 30 सेकंड की Shorts टाइमलाइन तैयार है।"); }}>＋ नई Shorts</button>
+        <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "😂 10 मिनट की 2D कॉमेडी वीडियो बनाओ"}</button>
+        <button className="reset" onClick={() => { setProject(makeProject(idea)); setProjectKey(k => k + 1); setStoryInfo(null); setStatus("नई खाली 10 मिनट की 2D कहानी टाइमलाइन तैयार है।"); }}>＋ नई Shorts</button>
       </div>
       <p className="editor-status">{rendering ? "MP4 export: " + Math.round(progress * 100) + "%" : status}</p>
-      {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · चलती वीडियो क्लिप: {storyInfo.videosCreated || 0}/5</p>}
-      <p className="editor-note">AI पहले 3D-स्टाइल कार्टून तस्वीरें बनाएगा, फिर Wan 2.2 से उन्हें चलती वीडियो क्लिप में बदलेगा और Clipkit टाइमलाइन में लगाएगा। यह image-to-video जनरेशन है, 3D मॉडल/mesh rigging नहीं। हर क्लिप लगभग 3 सेकंड की हो सकती है; मुफ्त सार्वजनिक GPU की कतार/सीमा के कारण सभी पाँच क्लिप बनना सुनिश्चित नहीं है। AI आवाज़ अभी अलग से जोड़नी बाकी है।</p>
+      {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · 2D तस्वीरें: {storyInfo.imagesCreated || 0}/10</p>}
+      <p className="editor-note">AI 10 मिनट की हिंदी कॉमेडी कहानी और डायलॉग लिखेगा, 10 सुसंगत 2D कार्टून दृश्य बनाएगा और Clipkit में 10 मिनट की टाइमलाइन पर लगाएगा। यह पहला संस्करण तस्वीरों और डायलॉग कैप्शन का 2D स्टोरी वीडियो है; पात्रों की पूरी frame-by-frame animation और AI voice/music अभी शामिल नहीं हैं। मुफ्त सार्वजनिक Image AI की कतार/सीमा के कारण generation की गारंटी नहीं है।</p>
     </section>
     <main className="clipkit-shell">
       <Editor key={projectKey} initialSource={project}
