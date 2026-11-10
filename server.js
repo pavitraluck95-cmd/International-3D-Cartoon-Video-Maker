@@ -1,8 +1,13 @@
 const express = require("express");
+const fs = require("fs/promises");
+const os = require("os");
+const { spawn } = require("child_process");
+const ffmpegPath = require("ffmpeg-static");
+const sharp = require("sharp");
 const path = require("path");
 const app = express();
 const port = process.env.PORT || 3000;
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "30mb" }));
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   const allowed = ["capacitor://localhost", "http://localhost", "https://localhost", "https://international-3d-cartoon-video-maker.onrender.com"];
@@ -327,6 +332,75 @@ app.post("/api/ai-director", async (req, res) => {
         ? "मुफ्त AI की कतार में बहुत समय लग गया। बाद में फिर कोशिश करें।"
         : (error && error.message || "2D कहानी/तस्वीरें तैयार नहीं हो पाईं।")
     });
+  }
+});
+
+
+function runFfmpeg(args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(ffmpegPath, args, { stdio: ["ignore", "ignore", "pipe"] });
+    let err = "";
+    child.stderr.on("data", chunk => { err += chunk.toString(); if (err.length > 12000) err = err.slice(-12000); });
+    child.on("error", reject);
+    child.on("close", code => code === 0 ? resolve() : reject(new Error("MP4 encoder failed: " + err.slice(-3500))));
+  });
+}
+
+// Render a real H.264 MP4 from the ten storyboards; narration is muxed as AAC when supplied.
+app.post("/api/render-mp4", async (req, res) => {
+  const scenes = req.body && req.body.scenes;
+  const narration = req.body && req.body.narration;
+  if (!Array.isArray(scenes) || scenes.length !== 10) return res.status(400).json({ error: "MP4 के लिए ठीक 10 दृश्य जरूरी हैं।" });
+  if (!ffmpegPath) return res.status(503).json({ error: "इस सर्वर पर FFmpeg encoder उपलब्ध नहीं है।" });
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cartoon-mp4-"));
+  try {
+    const list = [];
+    for (let i = 0; i < scenes.length; i++) {
+      const raw = String(scenes[i].image || "");
+      const match = raw.match(/^data:image\\/(?:svg\\+xml|png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/);
+      if (!match) throw new Error("दृश्य " + (i + 1) + " की तस्वीर सही नहीं है।");
+      const input = Buffer.from(match[1], "base64");
+      if (input.length > 5 * 1024 * 1024) throw new Error("दृश्य की तस्वीर बहुत बड़ी है।");
+      const frame = path.join(dir, "scene-" + String(i).padStart(2, "0") + ".jpg");
+      await sharp(input, { limitInputPixels: 16000000 }).resize(1280, 720, { fit: "cover" }).jpeg({ quality: 82 }).toFile(frame);
+      list.push("file '" + frame.replace(/'/g, "'\\''") + "'");
+      list.push("duration 60");
+    }
+    list.push(list[list.length - 2]);
+    const concatFile = path.join(dir, "scenes.txt");
+    await fs.writeFile(concatFile, list.join("\\n") + "\\n");
+    const output = path.join(dir, "cartoon.mp4");
+    const args = ["-y", "-f", "concat", "-safe", "0", "-i", concatFile];
+    let hasAudio = false;
+    if (typeof narration === "string") {
+      const audioMatch = narration.match(/^data:audio\\/(?:wav|x-wav|mpeg|mp3);base64,([A-Za-z0-9+/=]+)$/);
+      if (audioMatch) {
+        const audio = Buffer.from(audioMatch[1], "base64");
+        if (audio.length <= 18 * 1024 * 1024) {
+          await fs.writeFile(path.join(dir, "voice.wav"), audio);
+          args.push("-i", path.join(dir, "voice.wav"));
+          hasAudio = true;
+        }
+      }
+    }
+    args.push("-vsync", "vfr", "-r", "10", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p");
+    if (hasAudio) args.push("-map", "0:v:0", "-map", "1:a:0", "-c:a", "aac", "-b:a", "96k", "-shortest");
+    else args.push("-an");
+    args.push("-movflags", "+faststart", output);
+    await runFfmpeg(args);
+    const stat = await fs.stat(output);
+    if (stat.size < 50000) throw new Error("बनी हुई MP4 फाइल अधूरी है।");
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Content-Length", stat.size);
+    res.setHeader("Content-Disposition", 'attachment; filename="international-2d-cartoon.mp4"');
+    const stream = require("fs").createReadStream(output);
+    stream.on("error", err => { if (!res.headersSent) res.status(500).end(); });
+    stream.pipe(res);
+    res.on("close", () => fs.rm(dir, { recursive: true, force: true }).catch(() => {}));
+  } catch (error) {
+    console.error("MP4 render failed:", error && error.message);
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+    if (!res.headersSent) res.status(500).json({ error: "MP4 नहीं बन सकी: " + (error.message || "encoder error") });
   }
 });
 
