@@ -371,21 +371,20 @@ app.post("/api/render-mp4", async (req, res) => {
     await fs.writeFile(concatFile, list.join("\n") + "\n");
     const output = path.join(dir, "cartoon.mp4");
     const args = ["-y", "-f", "concat", "-safe", "0", "-i", concatFile];
-    let hasAudio = false;
-    if (typeof narration === "string") {
-      const audioMatch = narration.match(/^data:audio\/(?:wav|x-wav|mpeg|mp3);base64,([A-Za-z0-9+/=]+)$/);
-      if (audioMatch) {
-        const audio = Buffer.from(audioMatch[1], "base64");
-        if (audio.length <= 18 * 1024 * 1024) {
-          await fs.writeFile(path.join(dir, "voice.wav"), audio);
-          args.push("-i", path.join(dir, "voice.wav"));
-          hasAudio = true;
-        }
-      }
+    if (typeof narration !== "string") {
+      throw new Error("हिंदी आवाज़ नहीं मिली; बिना आवाज़ वाली MP4 नहीं बनाई जाएगी।");
     }
+    const audioMatch = narration.match(/^data:audio\/(?:wav|x-wav);base64,([A-Za-z0-9+/=]+)$/);
+    if (!audioMatch) throw new Error("हिंदी आवाज़ WAV फ़ॉर्मेट में नहीं मिली।");
+    const audio = Buffer.from(audioMatch[1], "base64");
+    if (audio.length < 44 || audio.length > 18 * 1024 * 1024 || audio.toString("ascii", 0, 4) !== "RIFF" || audio.toString("ascii", 8, 12) !== "WAVE") {
+      throw new Error("हिंदी आवाज़ की WAV फ़ाइल अधूरी या अमान्य है।");
+    }
+    const voiceFile = path.join(dir, "voice.wav");
+    await fs.writeFile(voiceFile, audio);
+    args.push("-i", voiceFile);
     args.push("-vsync", "vfr", "-r", "10", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p");
-    if (hasAudio) args.push("-map", "0:v:0", "-map", "1:a:0", "-c:a", "aac", "-b:a", "96k", "-af", "apad", "-t", "600");
-    else args.push("-an");
+    args.push("-map", "0:v:0", "-map", "1:a:0", "-c:a", "aac", "-b:a", "96k", "-af", "apad", "-t", "600");
     args.push("-movflags", "+faststart", output);
     await runFfmpeg(args);
     const stat = await fs.stat(output);
