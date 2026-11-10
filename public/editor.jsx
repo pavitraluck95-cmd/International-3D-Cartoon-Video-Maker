@@ -248,15 +248,17 @@ function App() {
         <div><strong>😂 2D कॉमेडी कार्टून वीडियो मेकर</strong><small>हिंदी कहानी + डायलॉग + 2D दृश्य + MP4</small></div>
       </header>
       <section className="director-bar">
-        <label htmlFor="story">अपनी कहानी लिखें या बोलें</label>
-        <textarea id="story" value={idea} onChange={event => setIdea(event.target.value)} placeholder="उदाहरण: चालाक पप्पू और भूतिया लड्डू…" />
         <div className="director-actions">
           <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "🎬 मेरी आज की 2D वीडियो तैयार करो"}</button>
-          <button className="reset" onClick={() => { setIdea(""); setStoryInfo(null); setStatus("नई कहानी लिखें या माइक्रोफोन से बोलें।"); }}>＋ नई कहानी</button>
         </div>
+        <details style={{ marginTop: 12 }}>
+          <summary style={{ cursor: "pointer", color: "#cbd5e1" }}>विषय बदलना चाहें? (वैकल्पिक)</summary>
+          <label htmlFor="story">वीडियो का विषय लिखें</label>
+          <textarea id="story" value={idea} onChange={event => setIdea(event.target.value)} placeholder="खाली छोड़ें तो ऐप खुद नई हिंदी कॉमेडी कहानी चुनेगा…" />
+        </details>
         <p className="editor-status">{status}</p>
         {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · 2D तस्वीरें: {storyInfo.imagesCreated || 0}/10</p>}
-        <p className="editor-note">यह ऐप 10 स्थिर 2D दृश्य, हिंदी डायलॉग और APK में उपलब्ध Android Text-to-Speech से MP4 बनाता है। पूरी frame-by-frame character animation और बैकग्राउंड संगीत अभी शामिल नहीं हैं। मुफ्त सार्वजनिक AI इंजन की उपलब्धता की गारंटी नहीं है।</p>
+        <p className="editor-note">यह चैट ऐप नहीं है। बटन दबाने पर उपलब्ध मुफ्त AI Director कहानी और संवाद तैयार करने की कोशिश करेगा। अभी वीडियो में 10 स्थिर 2D दृश्य और APK की Android हिंदी Text-to-Speech आवाज़ इस्तेमाल होती है; पूरी frame-by-frame animation और बैकग्राउंड संगीत शामिल नहीं हैं। मुफ्त AI इंजन की उपलब्धता की गारंटी नहीं है।</p>
       </section>
     </>}
     <section style={{ maxWidth: 900, margin: "18px auto", padding: 18, border: "1px solid #46536a", borderRadius: 14, background: "#111827" }}>
