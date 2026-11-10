@@ -275,7 +275,7 @@ app.post("/api/ai-director", async (req, res) => {
       if (!upstream.ok) throw new Error("Story AI HTTP " + upstream.status);
       const response = await upstream.json();
       let content = response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content;
-      if (Array.isArray(content)) content = content.map(part => part.text || "").join("\\n");
+      if (Array.isArray(content)) content = content.map(part => part.text || "").join("\n");
       if (typeof content !== "string") throw new Error("Story AI returned no story text");
       const cleaned = content.trim().replace(/^`{3}(?:json)?\s*/i, "").replace(/\s*`{3}$/, "");
       const firstBrace = cleaned.indexOf("{");
@@ -357,7 +357,7 @@ app.post("/api/render-mp4", async (req, res) => {
     const list = [];
     for (let i = 0; i < scenes.length; i++) {
       const raw = String(scenes[i].image || "");
-      const match = raw.match(/^data:image\\/(?:svg\\+xml|png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/);
+      const match = raw.match(/^data:image\/(?:svg\+xml|png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/);
       if (!match) throw new Error("दृश्य " + (i + 1) + " की तस्वीर सही नहीं है।");
       const input = Buffer.from(match[1], "base64");
       if (input.length > 5 * 1024 * 1024) throw new Error("दृश्य की तस्वीर बहुत बड़ी है।");
@@ -368,12 +368,12 @@ app.post("/api/render-mp4", async (req, res) => {
     }
     list.push(list[list.length - 2]);
     const concatFile = path.join(dir, "scenes.txt");
-    await fs.writeFile(concatFile, list.join("\\n") + "\\n");
+    await fs.writeFile(concatFile, list.join("\n") + "\n");
     const output = path.join(dir, "cartoon.mp4");
     const args = ["-y", "-f", "concat", "-safe", "0", "-i", concatFile];
     let hasAudio = false;
     if (typeof narration === "string") {
-      const audioMatch = narration.match(/^data:audio\\/(?:wav|x-wav|mpeg|mp3);base64,([A-Za-z0-9+/=]+)$/);
+      const audioMatch = narration.match(/^data:audio\/(?:wav|x-wav|mpeg|mp3);base64,([A-Za-z0-9+/=]+)$/);
       if (audioMatch) {
         const audio = Buffer.from(audioMatch[1], "base64");
         if (audio.length <= 18 * 1024 * 1024) {
