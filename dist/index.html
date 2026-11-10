@@ -105,3 +105,4 @@ document.getElementById("director").addEventListener("click",async()=>{
 });
 button.addEventListener("click",()=>{const idea=request.value.trim();if(!idea){status.textContent="पहले कहानी लिखें या माइक से बोलें।";request.focus();return;}status.textContent="एक-क्लिक प्रक्रिया शुरू हो रही है: कहानी → दृश्य → चलती क्लिप → MP4…";button.disabled=true;location.href="/editor?auto=1&idea="+encodeURIComponent(idea);});
 </script></body></html>
+<!-- Render redeploy trigger: expose free video fallback -->
