@@ -66,6 +66,7 @@ jobs:
 
             public class GallerySaver {
               private Uri pendingUri;
+              private Uri lastSavedUri;
               private OutputStream pendingOutput;
 
               @JavascriptInterface
@@ -116,6 +117,7 @@ jobs:
                     ready.put(MediaStore.Video.Media.IS_PENDING, 0);
                     getContentResolver().update(pendingUri, ready, null, null);
                   }
+                  lastSavedUri = pendingUri;
                   pendingUri = null;
                   return true;
                 } catch (Exception error) {
@@ -125,14 +127,24 @@ jobs:
               }
 
               @JavascriptInterface
-              public synchronized void openGallery() {
-                try {
-                  android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
-                  intent.setDataAndType(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video/*");
-                  intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                  intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                  startActivity(intent);
-                } catch (Exception ignored) {}
+              public void openGallery() {
+                runOnUiThread(() -> {
+                  try {
+                    Uri target = lastSavedUri != null ? lastSavedUri : MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+                    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                    intent.setDataAndType(target, "video/*");
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(intent);
+                  } catch (Exception ignored) {
+                    try {
+                      android.content.Intent fallback = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                      fallback.setType("video/*");
+                      fallback.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                      startActivity(fallback);
+                    } catch (Exception ignoredAgain) {}
+                  }
+                });
               }
 
               @JavascriptInterface
