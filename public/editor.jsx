@@ -88,11 +88,11 @@ function App() {
       setProject(next); setProjectKey(k => k + 1);
       setStoryInfo(data);
       setStatus(data.complete
-        ? "कहानी और पाँच चलती वीडियो क्लिप तैयार। अब MP4 export शुरू होगा…"
-        : "आंशिक प्रोजेक्ट तैयार: " + (data.videosCreated || 0) + "/5 क्लिप। " + (data.warning || "मुफ्त GPU ने पूरा काम नहीं किया।"));
+        ? "10 मिनट की 2D कहानी और 10 तस्वीरें तैयार। Clipkit MP4 export शुरू होगा…"
+        : "आंशिक 2D प्रोजेक्ट: " + (data.imagesCreated || 0) + "/10 तस्वीरें। " + (data.warning || "मुफ्त Image AI व्यस्त है।"));
       if (new URLSearchParams(window.location.search).get("auto") === "1") {
-        if (data.videosCreated > 0) await exportMP4(next, { resolution: "source" });
-        else setStatus("AI क्लिप नहीं बना पाया, इसलिए MP4 export नहीं किया गया: " + (data.warning || "मुफ्त GPU उपलब्ध नहीं है।"));
+        if (data.complete && data.imagesCreated === 10) await exportMP4(next, { resolution: "source" });
+        else setStatus("सभी 10 तस्वीरें नहीं बनीं, इसलिए पूरी MP4 export नहीं की गई।");
       }
     } catch (error) {
       setStatus(error.message || "AI कहानी/तस्वीरें तैयार नहीं कर पाया।");
