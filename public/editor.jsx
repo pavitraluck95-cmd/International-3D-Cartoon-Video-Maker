@@ -129,14 +129,24 @@ function App() {
       const filename = "international-2d-comedy-story.mp4";
       if (window.AndroidSaveVideo && typeof window.AndroidSaveVideo.saveVideo === "function") {
         setStatus("MP4 फोन की Gallery में सेव हो रही है…");
-        const bytes = new Uint8Array(await blob.arrayBuffer());
-        let binary = "";
-        const chunkSize = 0x8000;
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        if (!window.AndroidSaveVideo.beginSave(filename)) throw new Error("Gallery में MP4 फ़ाइल नहीं बन पाई।");
+        try {
+          const bytes = new Uint8Array(await blob.arrayBuffer());
+          const chunkSize = 256 * 1024;
+          for (let i = 0; i < bytes.length; i += chunkSize) {
+            let binary = "";
+            const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+            for (let j = 0; j < chunk.length; j += 0x8000) {
+              binary += String.fromCharCode(...chunk.subarray(j, Math.min(j + 0x8000, chunk.length)));
+            }
+            if (!window.AndroidSaveVideo.appendChunk(btoa(binary))) throw new Error("Gallery में MP4 डेटा सेव नहीं हो पाया।");
+            setProgress(Math.min(0.99, (i + chunk.length) / bytes.length));
+          }
+          if (!window.AndroidSaveVideo.finishSave()) throw new Error("Gallery में MP4 फ़ाइल पूरी नहीं हो पाई।");
+        } catch (saveError) {
+          window.AndroidSaveVideo.cancelSave();
+          throw saveError;
         }
-        const saved = window.AndroidSaveVideo.saveVideo(btoa(binary), filename);
-        if (!saved) throw new Error("फोन की Gallery में MP4 सेव नहीं हो पाई।");
         setStatus("MP4 फोन की Gallery → Movies → International 2D Cartoon Video Maker में सेव हो गई।");
       } else {
         const url = URL.createObjectURL(blob);
