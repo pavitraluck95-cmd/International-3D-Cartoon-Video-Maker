@@ -213,6 +213,33 @@ app.post("/api/animate-image", async (req, res) => {
 });
 
 
+
+/** Built-in family-friendly Hindi comedy fallback for when the optional story model is unavailable. */
+function makeFallbackComedyStory(idea) {
+  const topic = String(idea || "गाँव की मजेदार कहानी").trim().slice(0, 160);
+  const beats = [
+    ["सुबह की घोषणा", "मोहन बोला, आज मैं गाँव की सबसे बड़ी समस्या हल करूँगा।", "मोहन चौपाल में घोषणा करता है"],
+    ["पहला सवाल", "चिंटू बोला, समस्या क्या है? मोहन बोला, वही तो पता करना है।", "दो दोस्त चौपाल में बहस करते हैं"],
+    ["गलतफहमी", "गुड़िया ने समझा कि उनकी बकरी खो गई है और खोज शुरू कर दी।", "गुड़िया हाथ में डायरी लेकर आती है"],
+    ["घंटी का राज", "बकरी की घंटी बजी, पर आवाज़ मोहन की जेब से आई।", "मोहन की जेब से घंटी बजती है"],
+    ["सरपंच की पूछताछ", "सरपंच ने पूछा, घंटी जेब में क्यों? मोहन बोला, सुरक्षा में रखी है।", "सरपंच मोहन से सवाल करता है"],
+    ["उल्टा नक्शा", "चिंटू ने नक्शा बनाया, जिसमें गाँव की जगह समोसे की दुकान थी।", "चिंटू उल्टा नक्शा दिखाता है"],
+    ["खोज अभियान", "तीनों बकरी खोजते-खोजते हलवाई की दुकान पहुँच गए।", "तीनों दुकान के सामने दौड़ते हैं"],
+    ["बकरी मिली", "बकरी दुकान के पीछे आराम से पत्ते खा रही थी।", "बकरी दुकान के पीछे पत्ते खाती है"],
+    ["समोसे की चोरी", "मोहन ने आवाज़ लगाई तो बकरी चिंटू का समोसा लेकर भागी।", "बकरी समोसा लेकर भागती है और दोस्त पीछे दौड़ते हैं"],
+    ["हँसी वाला अंत", "सरपंच बोला, बकरी मिली या समोसा गया? सब हँस पड़े।", "सभी पात्र चौपाल पर हँसते हैं"]
+  ];
+  return {
+    title: topic + " — गाँव की मजेदार कॉमेडी",
+    characterBible: "मोहन: पीली कमीज़, नीली पैंट; चिंटू: हरी कमीज़; गुड़िया: गुलाबी पोशाक; सरपंच: सफेद कुर्ता और पगड़ी। सभी दृश्य रंगीन 2D कार्टून शैली में।",
+    scenes: beats.map((b) => ({
+      visual: b[2] + "। कहानी का विषय: " + topic,
+      dialogue: b[1],
+      imagePrompt: "Original family-friendly 2D Indian village cartoon. Consistent characters: Mohan in yellow shirt and blue pants, Chintu in green shirt, Gudiya in pink outfit, Sarpanch in white kurta and turban. Scene: " + b[2] + ". Bright colors, expressive faces, 16:9, no text, no watermark."
+    }))
+  };
+}
+
 // Free AI Director (anonymous public gateway; limited shared capacity, no API key).
 // This plans a short cartoon story and scene prompts; it does NOT render video.
 app.post("/api/ai-director", async (req, res) => {
