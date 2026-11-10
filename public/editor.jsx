@@ -9,7 +9,7 @@ import { ClipkitRuntime } from "@clipkit/runtime";
 import "@clipkit/editor/styles.css";
 import "./editor.css";
 
-function makeProject(idea = "", story = null) {
+function makeProject(idea = "", story = null, narrationDataUrl = null) {
   const scenes = story && Array.isArray(story.scenes) ? story.scenes : [];
   const elements = [
     { id: "background", type: "shape", layer: 1, shape: "rectangle",
@@ -53,6 +53,7 @@ function makeProject(idea = "", story = null) {
     });
     cursor += 60;
   });
+  if (narrationDataUrl) elements.push({ id: "hindi-dialogue-audio", type: "audio", layer: 0, source: narrationDataUrl, time: 0, duration: Math.max(600, cursor || 600), volume: 100 });
   const totalDuration = Math.max(600, cursor || 600);
   return {
     clipkit_version: "1.0", output_format: "mp4",
@@ -60,6 +61,35 @@ function makeProject(idea = "", story = null) {
     background_color: "#111827", elements
   };
 }
+let nativeTtsChunks = {};
+window.onNativeTtsChunk = (id, chunk, last) => {
+  const entry = nativeTtsChunks[id];
+  if (!entry) return;
+  entry.parts.push(chunk);
+  if (last) { delete nativeTtsChunks[id]; clearTimeout(entry.timer); entry.resolve("data:audio/wav;base64," + entry.parts.join("")); }
+};
+window.onNativeTtsError = (id, message) => {
+  const entry = nativeTtsChunks[id];
+  if (!entry) return;
+  delete nativeTtsChunks[id]; clearTimeout(entry.timer); entry.reject(new Error(message));
+};
+async function makeHindiNarration(story) {
+  if (!window.AndroidTTS || typeof window.AndroidTTS.synthesize !== "function") return null;
+  for (let i = 0; i < 80 && !window.AndroidTTS.isReady(); i++) await new Promise(resolve => setTimeout(resolve, 250));
+  if (!window.AndroidTTS.isReady()) throw new Error("फोन में हिंदी Text-to-Speech आवाज़ तैयार नहीं हुई।");
+  const script = (story.scenes || []).map(scene => scene.dialogue).filter(Boolean).join("। ");
+  if (!script.trim()) throw new Error("कहानी में बोलने के लिए डायलॉग नहीं मिले।");
+  const id = "tts" + Date.now().toString(36);
+  const audio = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { delete nativeTtsChunks[id]; reject(new Error("हिंदी आवाज़ बनाने में समय लग गया।")); }, 120000);
+    nativeTtsChunks[id] = { parts: [], resolve, reject, timer };
+    if (!window.AndroidTTS.synthesize(script.slice(0, 12000), id)) {
+      delete nativeTtsChunks[id]; clearTimeout(timer); reject(new Error("फोन की हिंदी आवाज़ शुरू नहीं हो सकी।"));
+    }
+  });
+  return audio;
+}
+
 function App() {
   const [idea, setIdea] = useState(() => new URLSearchParams(window.location.search).get("idea") || "");
   const isOneClick = new URLSearchParams(window.location.search).get("auto") === "1";
@@ -84,12 +114,17 @@ function App() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "AI अभी उपलब्ध नहीं है।");
-      setStatus("चरण 2/4: " + (data.imagesCreated || 0) + "/10 2D तस्वीरें बनीं। चरण 3/4: Clipkit टाइमलाइन और MP4 export…");
-      const next = makeProject(idea.trim() || data.title, data);
+      setStatus("चरण 2/4: " + (data.imagesCreated || 0) + "/10 2D तस्वीरें बनीं। चरण 4/5: Clipkit टाइमलाइन और MP4 export…");
+      let narration = null;
+      if (window.AndroidTTS) {
+        setStatus("चरण 3/5: फोन की हिंदी आवाज़ में डायलॉग तैयार हो रहे हैं…");
+        narration = await makeHindiNarration(data);
+      }
+      const next = makeProject(idea.trim() || data.title, data, narration);
       setProject(next); setProjectKey(k => k + 1);
       setStoryInfo(data);
       setStatus(data.complete
-        ? "चरण 3/4: कहानी, डायलॉग और 10 तस्वीरें Clipkit में। चरण 4/4: MP4 export और Gallery सेव…"
+        ? "चरण 4/5: कहानी, डायलॉग, तस्वीरें और हिंदी आवाज़ Clipkit में। चरण 5/5: MP4 export और Gallery सेव…"
         : "आंशिक 2D प्रोजेक्ट: " + (data.imagesCreated || 0) + "/10 तस्वीरें। " + (data.warning || "मुफ्त Image AI व्यस्त है।"));
       if (new URLSearchParams(window.location.search).get("auto") === "1") {
         if (data.complete && data.imagesCreated === 10) await exportMP4(next, { resolution: "source" });
@@ -182,7 +217,7 @@ function App() {
       </div>
       <p className="editor-status">{rendering ? "MP4 export: " + Math.round(progress * 100) + "%" : status}</p>
       {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · 2D तस्वीरें: {storyInfo.imagesCreated || 0}/10</p>}
-      <p className="editor-note">एक क्लिक पर AI Director कहानी और डायलॉग लिखेगा, 10 2D तस्वीरें बनाएगा, Clipkit टाइमलाइन में लगाएगा और MP4 export करके Gallery में सेव करने की कोशिश करेगा। यह पहला संस्करण तस्वीरों और डायलॉग कैप्शन का 2D स्टोरी वीडियो है; पात्रों की पूरी frame-by-frame animation और AI voice/music अभी शामिल नहीं हैं। मुफ्त सार्वजनिक Image AI की कतार/सीमा के कारण generation की गारंटी नहीं है।</p>
+      <p className="editor-note">एक क्लिक पर AI Director कहानी और डायलॉग लिखेगा, 10 2D तस्वीरें बनाएगा, Clipkit टाइमलाइन में लगाएगा और MP4 export करके Gallery में सेव करने की कोशिश करेगा। यह संस्करण 2D तस्वीरों, डायलॉग कैप्शन और समर्थित Android फोन पर हिंदी Text-to-Speech narration को जोड़ता है; पात्रों की पूरी frame-by-frame animation और बैकग्राउंड संगीत अभी शामिल नहीं हैं। मुफ्त सार्वजनिक Image AI की कतार/सीमा के कारण generation की गारंटी नहीं है।</p>
     </section>
     <main className="clipkit-shell">
       <Editor key={projectKey} initialSource={project}
