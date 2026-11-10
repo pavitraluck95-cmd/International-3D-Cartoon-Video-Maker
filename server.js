@@ -208,195 +208,28 @@ app.post("/api/ai-director", async (req, res) => {
   if (idea.length > 1600) return res.status(400).json({ error: "विषय 1600 अक्षरों से छोटा रखें।" });
   const system = "You are a professional 3D cartoon short-film writer and storyboard director. Reply in simple Hindi. Create one original family-friendly YouTube Short of exactly about 30 seconds, split into 5 scenes of about 6 seconds each. Keep character names, clothes, colors, proportions and environment consistent across all scenes. Include: catchy Hindi title, character continuity sheet, 5 numbered scenes with visual action/camera movement, Hindi dialogue or narration, sound/music cue, and one concise English visual-generation prompt per scene. Do not claim to render or create a video. Avoid copyrighted characters and existing franchises. Keep output compact and practical.";
   try {
-    const upstream = await fetch("https://vireonix.ai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "auto",
-        messages: [{ role: "system", content: system }, { role: "user", content: idea }],
-        temperature: 0.7,
-        max_tokens: 1800
-      }),
-      signal: AbortSignal.timeout(90000)
-    });
-    const raw = await upstream.text();
-    if (!upstream.ok) {
-      console.error("AI Director Vireonix error:", upstream.status, raw.slice(0, 700));
-      return res.status(upstream.status === 429 ? 429 : 502).json({
-        error: upstream.status === 429
-          ? "मुफ्त AI Director की आज की सीमा पूरी हो गई या कतार व्यस्त है। बाद में फिर कोशिश करें।"
-          : "मुफ्त AI Director अभी उपलब्ध नहीं है। कुछ देर बाद फिर कोशिश करें।"
+    let story;
+    try {
+      const upstream = await fetch("https://vireonix.ai/v1/chat/completions", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "auto",
+          messages: [{ role: "system", content: system }, { role: "user", content: idea }],
+          temperature: 0.75, max_tokens: 6500
+        }),
+        signal: AbortSignal.timeout(90000)
       });
-    }
-    let data;
-    try { data = JSON.parse(raw); } catch {
-      console.error("AI Director invalid Vireonix JSON:", raw.slice(0, 500));
-      return res.status(502).json({ error: "AI Director से सही जवाब नहीं मिला।" });
-    }
-    const answer = data?.choices?.[0]?.message?.content;
-    if (typeof answer !== "string" || !answer.trim()) {
-      console.error("AI Director empty Vireonix response:", raw.slice(0, 700));
-      return res.status(502).json({ error: "AI Director ने खाली जवाब दिया।" });
-    }
-    return res.json({ plan: answer.trim(), model: data.model || "auto" });
-  } catch (error) {
-    console.error("AI Director Vireonix request failed:", error?.name, error?.message);
-    return res.status(502).json({ error: "AI Director से संपर्क नहीं हो पाया। मुफ्त सेवा की उपलब्धता बदल सकती है।" });
-  }
-});
-
-
-async function requestCartoonImage(prompt) {
-  const base = "https://akhaliq-z-image-turbo.hf.space";
-  const submit = await fetch(base + "/gradio_api/call/generate_image", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ data: [prompt, 1024, 576, 9, -1, true] }),
-    signal: AbortSignal.timeout(90000)
-  });
-  if (!submit.ok) throw new Error("मुफ्त Cartoon Image GPU व्यस्त है या सीमा पूरी है (HTTP " + submit.status + ")।");
-  const queued = await submit.json();
-  if (!queued.event_id) throw new Error("Image AI ने generation शुरू नहीं किया।");
-  const result = await fetch(base + "/gradio_api/call/generate_image/" + encodeURIComponent(queued.event_id), {
-    headers: { "Accept": "text/event-stream" }, signal: AbortSignal.timeout(180000)
-  });
-  if (!result.ok) throw new Error("Image AI से परिणाम नहीं मिला।");
-  const raw = await result.text();
-  let completed = null, failed = false;
-  for (const block of raw.split(/\r?\n\r?\n/)) {
-    const event = block.match(/^event:\s*(\S+)/m);
-    const data = block.split(/\r?\n/).filter(line => line.startsWith("data:"))
-      .map(line => line.slice(5).trim()).join("\n");
-    if (event && event[1] === "error") failed = true;
-    if (event && event[1] === "complete" && data) { try { completed = JSON.parse(data); } catch (e) {} }
-  }
-  if (failed || !completed) throw new Error("Image AI GPU व्यस्त है या तस्वीर नहीं बना पाया।");
-  function findImage(value) {
-    if (Array.isArray(value)) {
-      for (const item of value) { const found = findImage(item); if (found) return found; }
-    } else if (value && typeof value === "object") {
-      if (typeof value.url === "string" && value.url) return value.url.startsWith("http://") || value.url.startsWith("https://") ? value.url : new URL(value.url, base).href;
-      if (typeof value.path === "string" && value.path) return value.path.startsWith("http://") || value.path.startsWith("https://")
-        ? value.path : base + "/gradio_api/file=" + encodeURIComponent(value.path);
-      for (const key of ["data", "value", "output", "image", "files"]) {
-        const found = findImage(value[key]); if (found) return found;
-      }
-    } else if (typeof value === "string" && /^https?:\/\//.test(value)) return value;
-    return null;
-  }
-  const imageUrl = findImage(completed);
-  if (!imageUrl) throw new Error("Image AI ने तस्वीर का डाउनलोड पता नहीं दिया।");
-  const imageResponse = await fetch(imageUrl, { signal: AbortSignal.timeout(60000) });
-  if (!imageResponse.ok) throw new Error("बनी हुई तस्वीर डाउनलोड नहीं हो सकी।");
-  const contentType = imageResponse.headers.get("content-type") || "image/png";
-  if (!contentType.startsWith("image/")) throw new Error("Image AI ने image file के बजाय दूसरा परिणाम दिया।");
-  const bytes = Buffer.from(await imageResponse.arrayBuffer());
-  if (!bytes.length || bytes.length > 8 * 1024 * 1024) throw new Error("तस्वीर का आकार बहुत बड़ा है।");
-  return "data:" + contentType + ";base64," + bytes.toString("base64");
-}
-
-
-async function generateWanMotionClip(imageData, prompt) {
-  const base = "https://cbensimon-wan2-2-fp8da-aoti-preview2.hf.space";
-  const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(imageData || "");
-  if (!match) throw new Error("दृश्य की reference image सही नहीं है।");
-  const mimeType = "image/" + match[1];
-  const bytes = Buffer.from(match[2], "base64");
-  const ext = match[1] === "jpeg" ? "jpg" : match[1];
-  const form = new FormData();
-  form.append("files", new Blob([bytes], { type: mimeType }), "scene." + ext);
-  const upload = await fetch(base + "/gradio_api/upload", {
-    method: "POST", body: form, signal: AbortSignal.timeout(60000)
-  });
-  if (!upload.ok) throw new Error("Wan AI reference image upload नहीं कर पाया।");
-  const uploaded = await upload.json();
-  const imagePath = Array.isArray(uploaded) ? uploaded[0] : uploaded;
-  if (typeof imagePath !== "string") throw new Error("Wan AI को reference image नहीं मिली।");
-  const submit = await fetch(base + "/gradio_api/call/generate_video", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ data: [
-      { path: imagePath, url: base + "/gradio_api/file=" + imagePath, orig_name: "scene." + ext, size: null, mime_type: mimeType, meta: { _type: "gradio.FileData" } },
-      null, prompt, 6, "色调艳丽, 过曝, 静态, 细节模糊不清, 字幕, 最差质量, 低质量, 畸形的, 多余的手指, 静止不动的画面",
-      3.5, 1, 1, 42, true, 6, "UniPCMultistep", 3, 16, false, true
-    ] }),
-    signal: AbortSignal.timeout(60000)
-  });
-  if (!submit.ok) throw new Error("Wan 2.2 वीडियो इंजन ने अनुरोध स्वीकार नहीं किया।");
-  const queued = await submit.json();
-  if (!queued.event_id) throw new Error("Wan 2.2 ने वीडियो बनाना शुरू नहीं किया।");
-  const result = await fetch(base + "/gradio_api/call/generate_video/" + encodeURIComponent(queued.event_id), {
-    headers: { "Accept": "text/event-stream" }, signal: AbortSignal.timeout(240000)
-  });
-  if (!result.ok) throw new Error("Wan 2.2 से वीडियो परिणाम नहीं मिला।");
-  const raw = await result.text();
-  let completed = null, failed = false;
-  for (const block of raw.split(/\r?\n\r?\n/)) {
-    const event = block.match(/^event:\s*(\S+)/m)?.[1];
-    const data = block.split(/\r?\n/).filter(line => line.startsWith("data:"))
-      .map(line => line.slice(5).trim()).join("\n");
-    if (event === "error") failed = true;
-    if (event === "complete" && data) { try { completed = JSON.parse(data); } catch {} }
-  }
-  if (failed || !completed) throw new Error("Wan 2.2 का मुफ्त GPU व्यस्त है या वीडियो नहीं बना पाया।");
-  function findVideo(value) {
-    if (Array.isArray(value)) {
-      for (const item of value) { const found = findVideo(item); if (found) return found; }
-    } else if (value && typeof value === "object") {
-      if (typeof value.url === "string" && value.url) return /^https?:/.test(value.url) ? value.url : new URL(value.url, base).href;
-      if (typeof value.path === "string" && value.path) return /^https?:/.test(value.path) ? value.path : base + "/gradio_api/file=" + encodeURIComponent(value.path);
-      for (const key of ["data", "value", "output", "video", "files"]) {
-        const found = findVideo(value[key]); if (found) return found;
-      }
-    } else if (typeof value === "string" && /^https?:/.test(value)) return value;
-    return null;
-  }
-  const videoUrl = findVideo(completed);
-  if (!videoUrl) throw new Error("Wan 2.2 ने MP4 का पता नहीं दिया।");
-  const videoResponse = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) });
-  if (!videoResponse.ok) throw new Error("बनी हुई वीडियो डाउनलोड नहीं हो सकी।");
-  const contentType = videoResponse.headers.get("content-type") || "video/mp4";
-  if (!contentType.startsWith("video/")) throw new Error("Wan 2.2 ने MP4 के बजाय दूसरा परिणाम दिया।");
-  const videoBytes = Buffer.from(await videoResponse.arrayBuffer());
-  if (!videoBytes.length || videoBytes.length > 18 * 1024 * 1024) throw new Error("बनी हुई वीडियो का आकार बहुत बड़ा है।");
-  return "data:video/mp4;base64," + videoBytes.toString("base64");
-}
-
-app.post("/api/ai-movie", async (req, res) => {
-  const idea = req.body && typeof req.body.idea === "string" ? req.body.idea.trim() : "";
-  if (!idea) return res.status(400).json({ error: "पहले कॉमेडी कहानी का विषय लिखें या बोलें।" });
-  if (idea.length > 1400) return res.status(400).json({ error: "विषय 1400 अक्षरों से छोटा रखें।" });
-  const system = [
-    "You are a professional family-friendly 2D cartoon comedy writer and storyboard director.",
-    "Return ONLY valid JSON with this exact shape:",
-    '{"title":"Hindi title","characterBible":"consistent character descriptions","scenes":[{"n":1,"duration":60,"visual":"Hindi visual description","dialogue":"Hindi narration and character dialogue","imagePrompt":"English image generation prompt"}]}',
-    "Create exactly 10 scenes for a complete approximately 10-minute Hindi comedy cartoon story. Each scene represents about 60 seconds.",
-    "Write a complete story with a funny opening, escalating comic misunderstandings, a clear climax and satisfying punchline ending. Each scene must contain enough Hindi dialogue/narration for its minute; do not make dialogue just one short sentence.",
-    "Maintain the same character names, faces, clothes, colors and proportions across all scenes. Repeat the full character appearance in every imagePrompt.",
-    "Image prompts MUST request a colorful hand-drawn 2D cartoon illustration, clean 2D animation cel style, bold expressive outlines, flat cel shading, expressive family-friendly characters, consistent character design, 16:9 landscape composition, no 3D, no CGI, no photorealism, no text, no subtitles, no watermark.",
-    "Use original characters only. Avoid copyrighted characters and existing franchises."
-  ].join(" ");
-  try {
-    const upstream = await fetch("https://vireonix.ai/v1/chat/completions", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "auto",
-        messages: [{ role: "system", content: system }, { role: "user", content: idea }],
-        temperature: 0.75, max_tokens: 6500
-      }),
-      signal: AbortSignal.timeout(90000)
-    });
-    const raw = await upstream.text();
-    if (!upstream.ok) return res.status(upstream.status === 429 ? 429 : 502).json({
-      error: upstream.status === 429 ? "मुफ्त Story AI की सीमा पूरी है या सेवा व्यस्त है।" : "Story AI अभी जवाब नहीं दे रहा।"
-    });
-    const response = JSON.parse(raw);
-    let content = response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content;
-    if (Array.isArray(content)) content = content.map(part => part.text || "").join("\n");
-    if (typeof content !== "string") return res.status(502).json({ error: "Story AI ने कहानी नहीं दी।" });
-    const jsonText = content.trim().replace(/^`{3}(?:json)?\s*/i, "").replace(/\s*`{3}$/, "");
-    const story = JSON.parse(jsonText);
-    if (!Array.isArray(story.scenes) || story.scenes.length !== 10) {
-      return res.status(502).json({ error: "AI ने 10 मिनट की कहानी के सभी 10 दृश्य नहीं दिए। कृपया दोबारा कोशिश करें।" });
+      if (!upstream.ok) throw new Error("Story AI HTTP " + upstream.status);
+      const response = await upstream.json();
+      let content = response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content;
+      if (Array.isArray(content)) content = content.map(part => part.text || "").join("\\n");
+      if (typeof content !== "string") throw new Error("Story AI returned no story text");
+      const jsonText = content.trim().replace(/^`{3}(?:json)?\\s*/i, "").replace(/\\s*`{3}$/, "");
+      story = JSON.parse(jsonText);
+      if (!Array.isArray(story.scenes) || story.scenes.length !== 10) throw new Error("Story AI returned an incomplete 10-scene story");
+    } catch (storyError) {
+      console.error("Story AI unavailable; using built-in Hindi comedy fallback:", storyError && storyError.message);
+      story = makeFallbackComedyStory(idea);
     }
     const scenes = [];
     for (let i = 0; i < story.scenes.length; i++) {
