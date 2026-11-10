@@ -384,7 +384,7 @@ app.post("/api/render-mp4", async (req, res) => {
       }
     }
     args.push("-vsync", "vfr", "-r", "10", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p");
-    if (hasAudio) args.push("-map", "0:v:0", "-map", "1:a:0", "-c:a", "aac", "-b:a", "96k", "-shortest");
+    if (hasAudio) args.push("-map", "0:v:0", "-map", "1:a:0", "-c:a", "aac", "-b:a", "96k", "-af", "apad", "-t", "600");
     else args.push("-an");
     args.push("-movflags", "+faststart", output);
     await runFfmpeg(args);
