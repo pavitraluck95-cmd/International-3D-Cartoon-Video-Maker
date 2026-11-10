@@ -8,7 +8,7 @@ const distDir = path.join(__dirname, "dist");
 app.use(express.static(distDir));
 app.use(express.static(publicDir));
 
-app.get("/api/health", (_req, res) => res.json({ ok: true, app: "International 3D Cartoon Video Maker" }));
+app.get("/api/health", (_req, res) => res.json({ ok: true, app: "International 2D Cartoon Video Maker" }));
 
 // Anonymous access to the public Hugging Face Gradio Space. Shared free GPU may be busy.
 app.post("/api/generate", async (req, res) => {
