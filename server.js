@@ -363,18 +363,17 @@ async function generateWanMotionClip(imageData, prompt) {
 
 app.post("/api/ai-movie", async (req, res) => {
   const idea = req.body && typeof req.body.idea === "string" ? req.body.idea.trim() : "";
-  if (!idea) return res.status(400).json({ error: "पहले कहानी का विषय लिखें या बोलें।" });
-  if (idea.length > 1400) return res.status(400).json({ error: "कहानी 1400 अक्षरों से छोटी रखें।" });
+  if (!idea) return res.status(400).json({ error: "पहले कॉमेडी कहानी का विषय लिखें या बोलें।" });
+  if (idea.length > 1400) return res.status(400).json({ error: "विषय 1400 अक्षरों से छोटा रखें।" });
   const system = [
-    "You are a professional family-friendly 3D cartoon film director and storyboard writer.",
+    "You are a professional family-friendly 2D cartoon comedy writer and storyboard director.",
     "Return ONLY valid JSON with this exact shape:",
-    '{"title":"Hindi title","characterBible":"consistent character descriptions","scenes":[{"n":1,"duration":6,"visual":"Hindi visual description","dialogue":"short Hindi narration/dialogue","imagePrompt":"English image generation prompt"}]}',
-    "Create exactly 5 scenes for a 30-second vertical 9:16 cartoon short.",
-    "Maintain exactly the same characters, faces, clothing, colors and proportions across all scenes.",
-    "Every imagePrompt must repeat the full key character appearance from characterBible, then describe the current scene action and setting.",
-    "Image prompts must request polished high-quality 3D animated family-film cartoon art, expressive characters, cinematic lighting, vertical composition, no text, no subtitles, no watermark.",
-    "Make scenes visually different but story-continuous. Use original characters, no copyrighted franchise characters.",
-    "Keep each dialogue concise (max 18 Hindi words)."
+    '{"title":"Hindi title","characterBible":"consistent character descriptions","scenes":[{"n":1,"duration":60,"visual":"Hindi visual description","dialogue":"Hindi narration and character dialogue","imagePrompt":"English image generation prompt"}]}',
+    "Create exactly 10 scenes for a complete approximately 10-minute Hindi comedy cartoon story. Each scene represents about 60 seconds.",
+    "Write a complete story with a funny opening, escalating comic misunderstandings, a clear climax and satisfying punchline ending. Each scene must contain enough Hindi dialogue/narration for its minute; do not make dialogue just one short sentence.",
+    "Maintain the same character names, faces, clothes, colors and proportions across all scenes. Repeat the full character appearance in every imagePrompt.",
+    "Image prompts MUST request a colorful hand-drawn 2D cartoon illustration, clean 2D animation cel style, bold expressive outlines, flat cel shading, expressive family-friendly characters, consistent character design, 16:9 landscape composition, no 3D, no CGI, no photorealism, no text, no subtitles, no watermark.",
+    "Use original characters only. Avoid copyrighted characters and existing franchises."
   ].join(" ");
   try {
     const upstream = await fetch("https://vireonix.ai/v1/chat/completions", {
@@ -382,7 +381,7 @@ app.post("/api/ai-movie", async (req, res) => {
       body: JSON.stringify({
         model: "auto",
         messages: [{ role: "system", content: system }, { role: "user", content: idea }],
-        temperature: 0.65, max_tokens: 2200
+        temperature: 0.75, max_tokens: 6500
       }),
       signal: AbortSignal.timeout(90000)
     });
@@ -394,58 +393,43 @@ app.post("/api/ai-movie", async (req, res) => {
     let content = response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content;
     if (Array.isArray(content)) content = content.map(part => part.text || "").join("\n");
     if (typeof content !== "string") return res.status(502).json({ error: "Story AI ने कहानी नहीं दी।" });
-    const jsonText = content.trim().replace(/^\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}$/, "");
+    const jsonText = content.trim().replace(/^`{3}(?:json)?\s*/i, "").replace(/\s*`{3}$/, "");
     const story = JSON.parse(jsonText);
-    if (!Array.isArray(story.scenes) || story.scenes.length < 5) {
-      return res.status(502).json({ error: "Story AI ने पाँच पूरे दृश्य नहीं दिए।" });
+    if (!Array.isArray(story.scenes) || story.scenes.length !== 10) {
+      return res.status(502).json({ error: "AI ने 10 मिनट की कहानी के सभी 10 दृश्य नहीं दिए। कृपया दोबारा कोशिश करें।" });
     }
-    story.scenes = story.scenes.slice(0, 5);
-    const images = [];
-    const videos = [];
-    let imageError = "";
-    let videoError = "";
+    const scenes = [];
     for (let i = 0; i < story.scenes.length; i++) {
       const scene = story.scenes[i];
       const imagePrompt = String(scene.imagePrompt || scene.visual || "").slice(0, 1800);
       try {
         const image = await requestCartoonImage(imagePrompt);
-        images.push(image);
-        const motionPrompt = [
-          imagePrompt,
-          "Animate this exact 3D cartoon character and scene with clear continuous full-body movement, natural walking or action matching the scene, expressive face and eyes, moving hands and body, smooth cinematic camera movement, stable character identity, consistent clothes and colors, polished animated feature film quality, vertical-friendly centered framing. The character must visibly move; do not make a still image or slideshow."
-        ].join(" ");
-        const video = await generateWanMotionClip(image, motionPrompt);
-        videos.push(video);
+        scenes.push({
+          n: i + 1, duration: 60,
+          visual: String(scene.visual || ""),
+          dialogue: String(scene.dialogue || ""),
+          image
+        });
       } catch (error) {
-        const message = error.message || "3D motion video नहीं बन पाई।";
-        if (images.length < i + 1) imageError = message;
-        else videoError = message;
-        console.error("AI movie scene " + (i + 1) + " failed:", message);
-        break;
+        console.error("2D cartoon image scene " + (i + 1) + " failed:", error.message || error);
+        return res.status(502).json({
+          error: "2D कहानी लिख गई, लेकिन दृश्य " + (i + 1) + " की तस्वीर नहीं बन पाई। मुफ्त Image AI व्यस्त हो सकता है। अधूरी 10 मिनट की वीडियो डाउनलोड नहीं की गई।"
+        });
       }
     }
-    const readyCount = videos.length;
     return res.json({
       title: String(story.title || idea).slice(0, 100),
       characterBible: String(story.characterBible || ""),
-      scenes: story.scenes.map((scene, index) => ({
-        n: index + 1, duration: 3, visual: String(scene.visual || ""),
-        dialogue: String(scene.dialogue || ""),
-        image: images[index] || null,
-        video: videos[index] || null
-      })),
-      imagesCreated: images.length,
-      videosCreated: readyCount,
-      durationSeconds: readyCount * 3,
-      complete: readyCount === 5,
-      warning: videoError || imageError || (readyCount === 5 ? "" : "कुछ 3D चलती वीडियो क्लिप अभी नहीं बन पाईं।")
+      scenes, imagesCreated: scenes.length, videosCreated: 0,
+      durationSeconds: 600, complete: true,
+      message: "10 मिनट की 2D कहानी और 10 दृश्य तैयार हैं।"
     });
   } catch (error) {
-    console.error("AI movie pipeline error:", error && error.name, error && error.message);
+    console.error("2D AI movie pipeline error:", error && error.name, error && error.message);
     return res.status(502).json({
       error: error && error.name === "TimeoutError"
-        ? "AI की साझा कतार में बहुत समय लग गया। बाद में फिर कोशिश करें।"
-        : (error && error.message || "AI वीडियो तैयारी में समस्या आई।")
+        ? "मुफ्त AI की कतार में बहुत समय लग गया। बाद में फिर कोशिश करें।"
+        : (error && error.message || "2D कहानी/तस्वीरें तैयार नहीं हो पाईं।")
     });
   }
 });
