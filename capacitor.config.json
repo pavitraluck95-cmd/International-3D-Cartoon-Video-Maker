@@ -1,6 +1,6 @@
 {
   "appId": "com.international3dcartoon.videomaker",
-  "appName": "International 3D Cartoon Video Maker",
+  "appName": "International 2D Cartoon Video Maker",
   "webDir": "dist",
   "server": {
     "url": "https://international-3d-cartoon-video-maker.onrender.com",
