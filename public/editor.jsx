@@ -68,14 +68,14 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState("एक क्लिक में 10 मिनट की हिंदी 2D कॉमेडी कहानी, दृश्य और Clipkit टाइमलाइन।");
+  const [status, setStatus] = useState("एक क्लिक: AI कहानी + डायलॉग + 2D तस्वीरें → Clipkit टाइमलाइन → MP4 Gallery सेव।");
   const [storyInfo, setStoryInfo] = useState(null);
   const assetStore = useMemo(() => createLocalAssetStore(), []);
 
   async function createWholeCartoon() {
     if (!idea.trim()) setIdea("चालाक पप्पू और भूतिया लड्डू: गाँव में पप्पू को एक ऐसा लड्डू मिलता है जिसे खाते ही अजीब-अजीब आवाज़ें निकलती हैं।");
     setBusy(true); setStoryInfo(null);
-    setStatus("पहला चरण: AI 10 मिनट की 2D कॉमेडी कहानी और डायलॉग लिख रहा है…");
+    setStatus("चरण 1/4: AI Director हिंदी कहानी और डायलॉग लिख रहा है…");
     try {
       const response = await fetch("/api/ai-movie", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -83,12 +83,12 @@ function App() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "AI अभी उपलब्ध नहीं है।");
-      setStatus("दूसरा चरण: " + (data.imagesCreated || 0) + "/10 2D तस्वीरें बनीं। Clipkit टाइमलाइन तैयार हो रही है…");
+      setStatus("चरण 2/4: " + (data.imagesCreated || 0) + "/10 2D तस्वीरें बनीं। चरण 3/4: Clipkit टाइमलाइन और MP4 export…");
       const next = makeProject(idea.trim() || data.title, data);
       setProject(next); setProjectKey(k => k + 1);
       setStoryInfo(data);
       setStatus(data.complete
-        ? "10 मिनट की 2D कहानी और 10 तस्वीरें तैयार। Clipkit MP4 export शुरू होगा…"
+        ? "चरण 3/4: कहानी, डायलॉग और 10 तस्वीरें Clipkit में। चरण 4/4: MP4 export और Gallery सेव…"
         : "आंशिक 2D प्रोजेक्ट: " + (data.imagesCreated || 0) + "/10 तस्वीरें। " + (data.warning || "मुफ्त Image AI व्यस्त है।"));
       if (new URLSearchParams(window.location.search).get("auto") === "1") {
         if (data.complete && data.imagesCreated === 10) await exportMP4(next, { resolution: "source" });
@@ -173,12 +173,12 @@ function App() {
       <textarea id="story" value={idea} onChange={e => setIdea(e.target.value)}
         placeholder="उदाहरण: एक छोटा हाथी जंगल में खोए अपने दोस्त को ढूँढता है…" />
       <div className="director-actions">
-        <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "😂 10 मिनट की 2D कॉमेडी वीडियो बनाओ"}</button>
+        <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "🎬 मेरी आज की 2D वीडियो तैयार करो"}</button>
         <button className="reset" onClick={() => { setProject(makeProject(idea)); setProjectKey(k => k + 1); setStoryInfo(null); setStatus("नई खाली 10 मिनट की 2D कहानी टाइमलाइन तैयार है।"); }}>＋ नई कहानी</button>
       </div>
       <p className="editor-status">{rendering ? "MP4 export: " + Math.round(progress * 100) + "%" : status}</p>
       {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · 2D तस्वीरें: {storyInfo.imagesCreated || 0}/10</p>}
-      <p className="editor-note">AI 10 मिनट की हिंदी कॉमेडी कहानी और डायलॉग लिखेगा, 10 सुसंगत 2D कार्टून दृश्य बनाएगा और Clipkit में 10 मिनट की टाइमलाइन पर लगाएगा। यह पहला संस्करण तस्वीरों और डायलॉग कैप्शन का 2D स्टोरी वीडियो है; पात्रों की पूरी frame-by-frame animation और AI voice/music अभी शामिल नहीं हैं। मुफ्त सार्वजनिक Image AI की कतार/सीमा के कारण generation की गारंटी नहीं है।</p>
+      <p className="editor-note">एक क्लिक पर AI Director कहानी और डायलॉग लिखेगा, 10 2D तस्वीरें बनाएगा, Clipkit टाइमलाइन में लगाएगा और MP4 export करके Gallery में सेव करने की कोशिश करेगा। यह पहला संस्करण तस्वीरों और डायलॉग कैप्शन का 2D स्टोरी वीडियो है; पात्रों की पूरी frame-by-frame animation और AI voice/music अभी शामिल नहीं हैं। मुफ्त सार्वजनिक Image AI की कतार/सीमा के कारण generation की गारंटी नहीं है।</p>
     </section>
     <main className="clipkit-shell">
       <Editor key={projectKey} initialSource={project}
