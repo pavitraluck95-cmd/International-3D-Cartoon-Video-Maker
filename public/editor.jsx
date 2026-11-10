@@ -78,7 +78,7 @@ function App() {
     setBusy(true); setStoryInfo(null);
     setStatus("चरण 1/4: AI Director हिंदी कहानी और डायलॉग लिख रहा है…");
     try {
-      const response = await fetch("/api/ai-director", {
+      const response = await fetch("https://international-3d-cartoon-video-maker.onrender.com/api/ai-director", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idea: (idea.trim() || "चालाक पप्पू और भूतिया लड्डू: गाँव में पप्पू को एक ऐसा लड्डू मिलता है जिसे खाते ही अजीब-अजीब आवाज़ें निकलती हैं।") })
       });
