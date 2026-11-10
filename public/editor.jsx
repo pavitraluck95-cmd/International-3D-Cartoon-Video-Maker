@@ -62,6 +62,7 @@ function makeProject(idea = "", story = null) {
 }
 function App() {
   const [idea, setIdea] = useState(() => new URLSearchParams(window.location.search).get("idea") || "");
+  const isOneClick = new URLSearchParams(window.location.search).get("auto") === "1";
   const [autoStarted, setAutoStarted] = useState(false);
   const [project, setProject] = useState(() => makeProject());
   const [projectKey, setProjectKey] = useState(0);
@@ -127,7 +128,7 @@ function App() {
         onProgress: value => setProgress(value)
       });
       const filename = "international-2d-comedy-story.mp4";
-      if (window.AndroidSaveVideo && typeof window.AndroidSaveVideo.saveVideo === "function") {
+      if (window.AndroidSaveVideo && typeof window.AndroidSaveVideo.beginSave === "function") {
         setStatus("MP4 फोन की Gallery में सेव हो रही है…");
         if (!window.AndroidSaveVideo.beginSave(filename)) throw new Error("Gallery में MP4 फ़ाइल नहीं बन पाई।");
         try {
@@ -147,7 +148,8 @@ function App() {
           window.AndroidSaveVideo.cancelSave();
           throw saveError;
         }
-        setStatus("MP4 फोन की Gallery → Movies → International 2D Cartoon Video Maker में सेव हो गई।");
+        setStatus("MP4 सेव हो गई। अब Gallery खोली जा रही है…");
+        if (typeof window.AndroidSaveVideo.openGallery === "function") window.AndroidSaveVideo.openGallery();
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -164,6 +166,8 @@ function App() {
   }
 
   return <div className="editor-app">
+    {isOneClick && <section style={{padding:"32px 20px",textAlign:"center",maxWidth:560,margin:"12vh auto"}}><div style={{fontSize:48}}>🎬</div><h2>आपकी 2D वीडियो तैयार हो रही है</h2><p style={{color:"#ffe1a0",lineHeight:1.7}}>{rendering ? "MP4 बन रही है: " + Math.round(progress * 100) + "%" : status}</p><p style={{color:"#aebbd0",fontSize:13}}>कृपया ऐप खुला रखें। वीडियो सेव होने पर Gallery खोलने की कोशिश होगी।</p></section>}
+    {!isOneClick && <>
     <header className="editor-header">
       <a href="/" className="back-link">← मुख्य ऐप</a>
       <div><strong>😂 2D कॉमेडी कार्टून वीडियो मेकर</strong><small>2D Comedy Story + Dialogues + Pictures + Clipkit</small></div>
@@ -191,6 +195,7 @@ function App() {
         exportFormats={[{ id: "mp4", label: "MP4 · फोन पर export" }]}
         theme="dark" backend="auto" />
     </main>
+    </>}
   </div>;
 }
 
