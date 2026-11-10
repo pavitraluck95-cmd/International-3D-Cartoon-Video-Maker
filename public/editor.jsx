@@ -13,10 +13,10 @@ function makeProject(idea = "", story = null) {
   const scenes = story && Array.isArray(story.scenes) ? story.scenes : [];
   const elements = [
     { id: "background", type: "shape", layer: 1, shape: "rectangle",
-      x: 0, y: 0, width: 720, height: 1280, fill_color: "#111827",
-      time: 0, duration: Math.max(3, (story && story.durationSeconds) || 600) },
+      x: 0, y: 0, width: 1280, height: 720, fill_color: "#111827",
+      time: 0, duration: Math.max(600, (story && story.durationSeconds) || 600) },
     { id: "main-title", type: "text", layer: 20, time: 0, duration: 3,
-      x: 360, y: 110, x_anchor: 0.5, y_anchor: 0.5, width: 660, height: 140,
+      x: 640, y: 65, x_anchor: 0.5, y_anchor: 0.5, width: 1160, height: 110,
       text: String(story && story.title || idea || "मेरी नई कार्टून कहानी").slice(0, 80),
       font_family: "Inter", font_size: 48, font_weight: 800,
       fill_color: "#ffd36c", text_align: "center",
@@ -30,22 +30,22 @@ function makeProject(idea = "", story = null) {
       elements.push({
         id: "motion-video-" + (i + 1), type: "video", layer: 2,
         source: scene.video, fit: "cover",
-        x: 0, y: 0, width: 720, height: 1280,
+        x: 0, y: 0, width: 1280, height: 720,
         time: cursor, duration: clipDuration, volume: 1
       });
     } else if (scene.image) {
       elements.push({
         id: "scene-image-" + (i + 1), type: "image", layer: 2,
         source: scene.image, fit: "cover",
-        x: 0, y: 0, width: 720, height: 1280,
+        x: 0, y: 0, width: 1280, height: 720,
         time: cursor, duration: 3
       });
     }
     const caption = [scene.visual, scene.dialogue].filter(Boolean).join("\n");
     elements.push({
       id: "scene-caption-" + (i + 1), type: "text", layer: 3,
-      time: cursor, duration: 60, x: 360, y: 1080,
-      x_anchor: 0.5, y_anchor: 0.5, width: 660, height: 260,
+      time: cursor, duration: 60, x: 640, y: 610,
+      x_anchor: 0.5, y_anchor: 0.5, width: 1160, height: 180,
       text: caption.slice(0, 280), font_family: "Inter",
       font_size: 28, font_weight: 700, fill_color: "#ffffff",
       text_align: "center", background_color: "#101827",
@@ -56,7 +56,7 @@ function makeProject(idea = "", story = null) {
   const totalDuration = Math.max(600, cursor || 600);
   return {
     clipkit_version: "1.0", output_format: "mp4",
-    width: 720, height: 1280, duration: totalDuration, frame_rate: 30,
+    width: 1280, height: 720, duration: totalDuration, frame_rate: 30,
     background_color: "#111827", elements
   };
 }
@@ -128,7 +128,7 @@ function App() {
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = "international-cartoon-short.mp4";
+      a.href = url; a.download = "international-2d-comedy-story.mp4";
       document.body.appendChild(a); a.click(); a.remove();
       setStatus("MP4 तैयार है और डाउनलोड शुरू हो गया।");
       setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -150,7 +150,7 @@ function App() {
         placeholder="उदाहरण: एक छोटा हाथी जंगल में खोए अपने दोस्त को ढूँढता है…" />
       <div className="director-actions">
         <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "😂 10 मिनट की 2D कॉमेडी वीडियो बनाओ"}</button>
-        <button className="reset" onClick={() => { setProject(makeProject(idea)); setProjectKey(k => k + 1); setStoryInfo(null); setStatus("नई खाली 10 मिनट की 2D कहानी टाइमलाइन तैयार है।"); }}>＋ नई Shorts</button>
+        <button className="reset" onClick={() => { setProject(makeProject(idea)); setProjectKey(k => k + 1); setStoryInfo(null); setStatus("नई खाली 10 मिनट की 2D कहानी टाइमलाइन तैयार है।"); }}>＋ नई कहानी</button>
       </div>
       <p className="editor-status">{rendering ? "MP4 export: " + Math.round(progress * 100) + "%" : status}</p>
       {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · 2D तस्वीरें: {storyInfo.imagesCreated || 0}/10</p>}
