@@ -411,9 +411,20 @@ app.post("/api/ai-movie", async (req, res) => {
           image
         });
       } catch (error) {
-        console.error("2D cartoon image scene " + (i + 1) + " failed:", error.message || error);
-        return res.status(502).json({
-          error: "2D कहानी लिख गई, लेकिन दृश्य " + (i + 1) + " की तस्वीर नहीं बन पाई। मुफ्त Image AI व्यस्त हो सकता है। अधूरी 10 मिनट की वीडियो डाउनलोड नहीं की गई।"
+        console.error("2D cartoon image scene " + (i + 1) + " failed; using built-in 2D fallback:", error.message || error);
+        // Keep the one-click story pipeline usable when the shared free image GPU is unavailable.
+        // This is an original, locally-rendered 2D vector illustration, not an AI-generated image.
+        const esc = (value) => String(value || "").replace(/[&<>"]/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch]));
+        const label = esc(String(scene.visual || "मजेदार कार्टून दृश्य").slice(0, 110));
+        const palette = ["#fef3c7","#dbeafe","#dcfce7","#fce7f3","#ede9fe"];
+        const bg = palette[i % palette.length];
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="' + bg + '"/><circle cx="1080" cy="120" r="65" fill="#fde047"/><path d="M0 540 Q250 440 500 545 T1000 530 T1280 520 V720 H0Z" fill="#86c98a"/><path d="M0 610 Q300 530 650 620 T1280 590 V720 H0Z" fill="#55a86b"/><g stroke="#253047" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"><circle cx="470" cy="310" r="105" fill="#f6c79a"/><path d="M375 275 Q380 175 480 190 Q565 190 570 270" fill="#3b2a22"/><circle cx="435" cy="310" r="12" fill="#253047"/><circle cx="505" cy="310" r="12" fill="#253047"/><path d="M440 355 Q470 385 510 350" fill="none"/><path d="M385 430 Q470 390 555 435 L590 610 H350Z" fill="#ef6b55"/><circle cx="790" cy="330" r="100" fill="#e8b889"/><path d="M700 295 Q715 200 800 220 Q875 225 885 300" fill="#47352b"/><circle cx="755" cy="325" r="11" fill="#253047"/><circle cx="820" cy="325" r="11" fill="#253047"/><path d="M760 365 Q790 390 830 360" fill="none"/><path d="M710 445 Q790 405 870 450 L900 610 H680Z" fill="#4385d1"/></g><rect x="90" y="55" width="1100" height="90" rx="28" fill="#ffffff" opacity=".92"/><text x="640" y="112" text-anchor="middle" font-family="sans-serif" font-size="34" font-weight="700" fill="#253047">2D Comedy • दृश्य ' + (i + 1) + '</text><text x="640" y="675" text-anchor="middle" font-family="sans-serif" font-size="25" fill="#183b2a">' + label + '</text></svg>';
+        const image = "data:image/svg+xml;base64," + Buffer.from(svg, "utf8").toString("base64");
+        scenes.push({
+          n: i + 1, duration: 60,
+          visual: String(scene.visual || ""),
+          dialogue: String(scene.dialogue || ""),
+          image
         });
       }
     }
