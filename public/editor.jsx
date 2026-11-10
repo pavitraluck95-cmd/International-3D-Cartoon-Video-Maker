@@ -25,7 +25,7 @@ function makeProject(idea = "", story = null) {
   ];
   let cursor = 0;
   scenes.slice(0, 10).forEach((scene, i) => {
-    const clipDuration = scene.video ? 3 : 0;
+    const clipDuration = scene.video ? 60 : 0;
     if (scene.video) {
       elements.push({
         id: "motion-video-" + (i + 1), type: "video", layer: 2,
@@ -142,7 +142,7 @@ function App() {
   return <div className="editor-app">
     <header className="editor-header">
       <a href="/" className="back-link">← मुख्य ऐप</a>
-      <div><strong>🎬 International 3D Cartoon Video Maker</strong><small>2D Comedy Story + Dialogues + Pictures + Clipkit</small></div>
+      <div><strong>😂 2D कॉमेडी कार्टून वीडियो मेकर</strong><small>2D Comedy Story + Dialogues + Pictures + Clipkit</small></div>
     </header>
     <section className="director-bar">
       <label htmlFor="story">अपनी कहानी लिखें या बोलें</label>
