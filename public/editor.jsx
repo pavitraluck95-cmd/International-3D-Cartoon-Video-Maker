@@ -160,10 +160,10 @@ function App() {
         ? "कहानी, डायलॉग और 10 स्थानीय 2D दृश्य Clipkit में तैयार हैं। Android MP4 एक्सपोर्ट अभी उपलब्ध नहीं है; कोई तैयार MP4 सेव नहीं हुई है।"
         : "कहानी/दृश्य अधूरे हैं: " + (data.warning || "फिर कोशिश करें।"));
       if (new URLSearchParams(window.location.search).get("auto") === "1") {
-        if (data.videoComplete === true && data.imagesCreated === 10) {
+        if (data.storyComplete === true && Array.isArray(data.scenes) && data.scenes.length === 10) {
           await exportMP4(next, { resolution: "source" });
         } else {
-          setStatus(data.warning || "कहानी के दृश्य तैयार हुए हैं, लेकिन MP4 एक्सपोर्ट अभी उपलब्ध नहीं है। कोई MP4 सेव नहीं हुई है।");
+          setStatus(data.warning || "10 दृश्य पूरे नहीं मिले, इसलिए MP4 नहीं बनाई गई।");
         }
       }
     } catch (error) {
@@ -183,7 +183,7 @@ function App() {
 
   async function exportMP4(source, request) {
     if (!("VideoEncoder" in window) || !("VideoFrame" in window)) {
-      setStatus("इस मोबाइल ब्राउज़र में MP4 export के लिए WebCodecs उपलब्ध नहीं है। Chrome के नवीनतम संस्करण में खोलें।");
+      setStatus("इस Android WebView में WebCodecs उपलब्ध नहीं हैं। इस APK के लिए native MP4 encoder अभी बाकी है; इसलिए कोई MP4 सेव नहीं हुई।");
       return;
     }
     setRendering(true); setProgress(0); setStatus("आपके फोन पर MP4 बन रही है। स्क्रीन खुली रखें…");
