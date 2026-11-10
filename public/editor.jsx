@@ -181,7 +181,7 @@ function App() {
       setRendering(false);
     } catch (error) {
       setStatus(error.message || "मुफ्त AI कहानी/2D तस्वीरें तैयार नहीं कर पाया।");
-    } finally { setBusy(false); }
+    } finally { setBusy(false); setRendering(false); }
   }
 
   useEffect(() => {
