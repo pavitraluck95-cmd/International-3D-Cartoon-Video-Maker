@@ -214,6 +214,13 @@ app.post("/api/animate-image", async (req, res) => {
 
 
 
+/** Local 2D illustration fallback; works without a public image GPU. */
+async function requestCartoonImage(prompt) {
+  const safe = String(prompt || "मजेदार गाँव का दृश्य").replace(/[&<>"]/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch])).slice(0, 150);
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="#dbeafe"/><circle cx="1080" cy="120" r="68" fill="#fde047"/><path d="M0 500 Q250 420 500 510 T1000 500 T1280 490 V720 H0Z" fill="#86c98a"/><path d="M0 610 Q300 530 650 620 T1280 590 V720 H0Z" fill="#55a86b"/><g stroke="#253047" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"><circle cx="470" cy="310" r="105" fill="#f6c79a"/><path d="M375 275 Q380 175 480 190 Q565 190 570 270" fill="#3b2a22"/><circle cx="435" cy="310" r="12" fill="#253047"/><circle cx="505" cy="310" r="12" fill="#253047"/><path d="M440 355 Q470 385 510 350" fill="none"/><path d="M385 430 Q470 390 555 435 L590 610 H350Z" fill="#ef6b55"/><circle cx="790" cy="330" r="100" fill="#e8b889"/><path d="M700 295 Q715 200 800 220 Q875 225 885 300" fill="#47352b"/><circle cx="755" cy="325" r="11" fill="#253047"/><circle cx="820" cy="325" r="11" fill="#253047"/><path d="M760 365 Q790 390 830 360" fill="none"/><path d="M710 445 Q790 405 870 450 L900 610 H680Z" fill="#4385d1"/></g><rect x="70" y="48" width="1140" height="104" rx="24" fill="#fff" opacity=".94"/><text x="640" y="112" text-anchor="middle" font-family="sans-serif" font-size="30" font-weight="700" fill="#253047">' + safe + '</text></svg>';
+  return "data:image/svg+xml;base64," + Buffer.from(svg, "utf8").toString("base64");
+}
+
 /** Built-in family-friendly Hindi comedy fallback for when the optional story model is unavailable. */
 function makeFallbackComedyStory(idea) {
   const topic = String(idea || "गाँव की मजेदार कहानी").trim().slice(0, 160);
@@ -264,8 +271,11 @@ app.post("/api/ai-director", async (req, res) => {
       let content = response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content;
       if (Array.isArray(content)) content = content.map(part => part.text || "").join("\\n");
       if (typeof content !== "string") throw new Error("Story AI returned no story text");
-      const jsonText = content.trim().replace(/^`{3}(?:json)?\s*/i, "").replace(/\s*`{3}$/, "");
-      story = JSON.parse(jsonText);
+      const cleaned = content.trim().replace(/^`{3}(?:json)?\s*/i, "").replace(/\s*`{3}$/, "");
+      const firstBrace = cleaned.indexOf("{");
+      const lastBrace = cleaned.lastIndexOf("}");
+      if (firstBrace < 0 || lastBrace <= firstBrace) throw new Error("Story AI did not return a JSON object");
+      story = JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
       if (!Array.isArray(story.scenes) || story.scenes.length !== 10) throw new Error("Story AI returned an incomplete 10-scene story");
     } catch (storyError) {
       console.error("Story AI unavailable; using built-in Hindi comedy fallback:", storyError && storyError.message);
