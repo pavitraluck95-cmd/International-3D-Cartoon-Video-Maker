@@ -8,6 +8,7 @@ on:
       - "package.json"
       - "capacitor.config.json"
       - "public/**"
+      - "server.js"
       - ".github/workflows/build-apk.yml"
 
 jobs:
