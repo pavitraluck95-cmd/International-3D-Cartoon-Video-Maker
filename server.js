@@ -333,3 +333,5 @@ app.post("/api/ai-director", async (req, res) => {
 app.get("/editor", (_req, res) => res.sendFile(path.join(distDir, "editor.html"), (err) => { if (err) res.sendFile(path.join(publicDir, "editor.html")); }));
 app.get("*", (_req, res) => res.sendFile(path.join(distDir, "index.html"), (err) => { if (err) res.sendFile(path.join(publicDir, "index.html")); }));
 app.listen(port, "0.0.0.0", () => console.log("App listening on " + port));
+
+// Deployment refresh marker: 2026-11-10; Android MP4 encoder remains a separate native build task.
