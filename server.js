@@ -206,7 +206,7 @@ app.post("/api/ai-director", async (req, res) => {
   const idea = typeof req.body?.idea === "string" ? req.body.idea.trim() : "";
   if (!idea) return res.status(400).json({ error: "कहानी का विषय लिखें।" });
   if (idea.length > 1600) return res.status(400).json({ error: "विषय 1600 अक्षरों से छोटा रखें।" });
-  const system = "You are a professional 3D cartoon short-film writer and storyboard director. Reply in simple Hindi. Create one original family-friendly YouTube Short of exactly about 30 seconds, split into 5 scenes of about 6 seconds each. Keep character names, clothes, colors, proportions and environment consistent across all scenes. Include: catchy Hindi title, character continuity sheet, 5 numbered scenes with visual action/camera movement, Hindi dialogue or narration, sound/music cue, and one concise English visual-generation prompt per scene. Do not claim to render or create a video. Avoid copyrighted characters and existing franchises. Keep output compact and practical.";
+  const system = "You are a professional 2D cartoon comedy story writer and storyboard director. Reply in simple Hindi. Create an original family-friendly 10-minute Hindi comedy story split into exactly 10 scenes of about 60 seconds each. Keep character names, clothes, colors, proportions and environment consistent across all scenes. Include a catchy Hindi title, character continuity sheet, and exactly 10 numbered scenes with visual action, Hindi dialogue, and one concise image-generation prompt per scene. Do not claim to render video. Avoid copyrighted characters and existing franchises.";
   try {
     let story;
     try {
@@ -224,7 +224,7 @@ app.post("/api/ai-director", async (req, res) => {
       let content = response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content;
       if (Array.isArray(content)) content = content.map(part => part.text || "").join("\\n");
       if (typeof content !== "string") throw new Error("Story AI returned no story text");
-      const jsonText = content.trim().replace(/^`{3}(?:json)?\\s*/i, "").replace(/\\s*`{3}$/, "");
+      const jsonText = content.trim().replace(/^`{3}(?:json)?\s*/i, "").replace(/\s*`{3}$/, "");
       story = JSON.parse(jsonText);
       if (!Array.isArray(story.scenes) || story.scenes.length !== 10) throw new Error("Story AI returned an incomplete 10-scene story");
     } catch (storyError) {
