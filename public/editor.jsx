@@ -156,12 +156,15 @@ function App() {
       const next = makeProject(idea.trim() || data.title, data, narration);
       setProject(next); setProjectKey(k => k + 1);
       setStoryInfo(data);
-      setStatus(data.complete
-        ? "चरण 4/5: कहानी, डायलॉग, तस्वीरें और हिंदी आवाज़ Clipkit में। चरण 5/5: MP4 export और Gallery सेव…"
-        : "आंशिक 2D प्रोजेक्ट: " + (data.imagesCreated || 0) + "/10 तस्वीरें। " + (data.warning || "मुफ्त Image AI व्यस्त है।"));
+      setStatus(data.storyComplete
+        ? "कहानी, डायलॉग और 10 स्थानीय 2D दृश्य Clipkit में तैयार हैं। Android MP4 एक्सपोर्ट अभी उपलब्ध नहीं है; कोई तैयार MP4 सेव नहीं हुई है।"
+        : "कहानी/दृश्य अधूरे हैं: " + (data.warning || "फिर कोशिश करें।"));
       if (new URLSearchParams(window.location.search).get("auto") === "1") {
-        if (data.complete && data.imagesCreated === 10) await exportMP4(next, { resolution: "source" });
-        else setStatus("सभी 10 तस्वीरें नहीं बनीं, इसलिए पूरी MP4 export नहीं की गई।");
+        if (data.videoComplete === true && data.imagesCreated === 10) {
+          await exportMP4(next, { resolution: "source" });
+        } else {
+          setStatus(data.warning || "कहानी के दृश्य तैयार हुए हैं, लेकिन MP4 एक्सपोर्ट अभी उपलब्ध नहीं है। कोई MP4 सेव नहीं हुई है।");
+        }
       }
     } catch (error) {
       setStatus(error.message || "मुफ्त AI कहानी/2D तस्वीरें तैयार नहीं कर पाया।");
@@ -233,7 +236,7 @@ function App() {
       </div>
       <p className="editor-status">{rendering ? "MP4 export: " + Math.round(progress * 100) + "%" : status}</p>
       {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · 2D तस्वीरें: {storyInfo.imagesCreated || 0}/10</p>}
-      <p className="editor-note">एक क्लिक पर AI Director कहानी और डायलॉग लिखेगा, 10 2D तस्वीरें बनाएगा, Clipkit टाइमलाइन में लगाएगा और MP4 export करके ऐप के सेव बॉक्स में जमा करेगा। यह संस्करण 2D तस्वीरों, डायलॉग कैप्शन और समर्थित Android फोन पर हिंदी Text-to-Speech narration को जोड़ता है; पात्रों की पूरी frame-by-frame animation और बैकग्राउंड संगीत अभी शामिल नहीं हैं। मुफ्त सार्वजनिक Image AI की कतार/सीमा के कारण generation की गारंटी नहीं है।</p>
+      <p className="editor-note">एक क्लिक पर AI Director कहानी और डायलॉग लिखता है और स्थानीय 2D दृश्य Clipkit टाइमलाइन में लगाता है। Android-संगत MP4 export अभी लागू नहीं है, इसलिए ऐप तैयार MP4 होने का दावा नहीं करेगा। यह संस्करण 2D तस्वीरों, डायलॉग कैप्शन और समर्थित Android फोन पर हिंदी Text-to-Speech narration को जोड़ता है; पात्रों की पूरी frame-by-frame animation और बैकग्राउंड संगीत अभी शामिल नहीं हैं। मुफ्त सार्वजनिक Image AI की कतार/सीमा के कारण generation की गारंटी नहीं है।</p>
     </section>
     <main className="clipkit-shell">
       <Editor key={projectKey} initialSource={project}
