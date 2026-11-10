@@ -156,16 +156,29 @@ function App() {
       const next = makeProject(idea.trim() || data.title, data, narration);
       setProject(next); setProjectKey(k => k + 1);
       setStoryInfo(data);
-      setStatus(data.storyComplete
-        ? "कहानी, डायलॉग और 10 स्थानीय 2D दृश्य Clipkit में तैयार हैं। Android MP4 एक्सपोर्ट अभी उपलब्ध नहीं है; कोई तैयार MP4 सेव नहीं हुई है।"
-        : "कहानी/दृश्य अधूरे हैं: " + (data.warning || "फिर कोशिश करें।"));
-      if (new URLSearchParams(window.location.search).get("auto") === "1") {
-        if (data.storyComplete === true && Array.isArray(data.scenes) && data.scenes.length === 10) {
-          await exportMP4(next, { resolution: "source" });
-        } else {
-          setStatus(data.warning || "10 दृश्य पूरे नहीं मिले, इसलिए MP4 नहीं बनाई गई।");
-        }
+      if (data.storyComplete !== true || !Array.isArray(data.scenes) || data.scenes.length !== 10) {
+        throw new Error(data.warning || "10 पूरे दृश्य नहीं मिले।");
       }
+      if (!narration) throw new Error("हिंदी डायलॉग की आवाज़ नहीं बनी, इसलिए बिना आवाज़ वाली MP4 सेव नहीं की गई।");
+      setRendering(true); setProgress(0);
+      setStatus("चरण 4/5: 10 दृश्यों और हिंदी डायलॉग की आवाज़ से MP4 बन रही है…");
+      const renderResponse = await fetch("https://international-3d-cartoon-video-maker.onrender.com/api/render-mp4", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scenes: data.scenes, narration })
+      });
+      if (!renderResponse.ok) {
+        let detail = "सर्वर MP4 नहीं बना पाया।";
+        try { const failure = await renderResponse.json(); detail = failure.error || detail; } catch (_) {}
+        throw new Error(detail);
+      }
+      const mp4 = await renderResponse.blob();
+      if (mp4.size < 50000 || mp4.type !== "video/mp4") throw new Error("सर्वर से सही MP4 फाइल नहीं मिली।");
+      setStatus("चरण 5/5: MP4 ऐप की निजी वीडियो लाइब्रेरी में सेव हो रही है…");
+      await saveVideoToLibrary(mp4, "international-2d-comedy-story.mp4", 600);
+      await refreshSavedVideos();
+      setProgress(1);
+      setStatus("10 मिनट की MP4 और हिंदी आवाज़ ऐप के ‘मेरे सेव किए वीडियो’ में सेव हो गई है।");
+      setRendering(false);
     } catch (error) {
       setStatus(error.message || "मुफ्त AI कहानी/2D तस्वीरें तैयार नहीं कर पाया।");
     } finally { setBusy(false); }
