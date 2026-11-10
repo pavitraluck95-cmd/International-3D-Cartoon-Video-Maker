@@ -38,7 +38,7 @@ function makeProject(idea = "", story = null) {
         id: "scene-image-" + (i + 1), type: "image", layer: 2,
         source: scene.image, fit: "cover",
         x: 0, y: 0, width: 1280, height: 720,
-        time: cursor, duration: 3
+        time: cursor, duration: 60
       });
     }
     const caption = [scene.visual, scene.dialogue].filter(Boolean).join("\n");
