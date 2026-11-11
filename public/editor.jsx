@@ -252,7 +252,7 @@ function App() {
           <textarea id="story" value={idea} onChange={event => setIdea(event.target.value)} placeholder="खाली छोड़ें तो ऐप खुद नई हिंदी कॉमेडी कहानी चुनेगा…" />
         </details>
         <p className="editor-status">{status}</p>
-        {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · 2D तस्वीरें: {storyInfo.imagesCreated || 0}/10</p>}
+        {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"}</p>}
         <p className="editor-note">मुख्य बटन अब 30 सेकंड का वास्तविक 3D MP4 बनाता है। 3D रिकॉर्डिंग फोन पर होती है, फिर हिंदी आवाज़ के साथ MP4 बनाकर इसी ऐप की Library में सेव होती है। यह शुरुआती 3D परीक्षण है; पूरी कहानी के अनेक दृश्यों में विस्तार अगला चरण है।</p>
       </section>
     </>}
