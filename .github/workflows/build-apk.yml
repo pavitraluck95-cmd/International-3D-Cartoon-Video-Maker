@@ -129,7 +129,7 @@ jobs:
                     for (int p = 0; p < encoded.length(); p += chunk) {
                       String part = encoded.substring(p, Math.min(encoded.length(), p + chunk));
                       boolean last = p + chunk >= encoded.length();
-                      String js = "window.onNativeTtsChunk && window.onNativeTtsChunk('" + id + "','" + part + "'," + last + ")";
+                      String js = "(function(){var id='" + id + "',part='" + part + "',last=" + last + ";if(window.onNativeTtsChunk)window.onNativeTtsChunk(id,part,last);try{for(var i=0;i<window.frames.length;i++){var f=window.frames[i];if(f.onNativeTtsChunk)f.onNativeTtsChunk(id,part,last);}}catch(e){}})()";
                       getBridge().getWebView().post(() -> getBridge().getWebView().evaluateJavascript(js, null));
                     }
                     audio.delete();
@@ -141,7 +141,7 @@ jobs:
             private void sendTtsError(String id, String message) {
               String safe = message.replace("'", "\\'");
               getBridge().getWebView().post(() -> getBridge().getWebView().evaluateJavascript(
-                "window.onNativeTtsError && window.onNativeTtsError('" + id + "','" + safe + "')", null));
+                "(function(){var id='" + id + "',msg='" + safe + "';if(window.onNativeTtsError)window.onNativeTtsError(id,msg);try{for(var i=0;i<window.frames.length;i++){var f=window.frames[i];if(f.onNativeTtsError)f.onNativeTtsError(id,msg);}}catch(e){}})()", null));
             }
             public class NativeSpeech {
               @JavascriptInterface public boolean isReady() { return ttsReady; }
