@@ -225,14 +225,14 @@ function App() {
         "Hindi comedy scene: " + (idea.trim() || "दो दोस्तों के बीच मजेदार गलतफहमी और हँसी वाला छोटा दृश्य"),
         "No 2D drawings, no still slideshow, no text, no subtitles, no logos, no celebrity likeness, original fictional characters only."
       ].join(" ");
-      const generated = await fetch(API + "/api/generate", {
+      const generated = await fetch(window.location.origin + "/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt })
       });
       const data = await generated.json().catch(() => ({}));
       if (!generated.ok || !data.videoUrl) throw new Error(data.error || "AI इंजन वीडियो नहीं बना पाया।");
       setStatus("AI क्लिप बन गई है। अब MP4 ऐप की Library में सेव हो रही है…");
-      const fileResponse = await fetch(API + "/api/download-ai-video", {
+      const fileResponse = await fetch(window.location.origin + "/api/download-ai-video", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoUrl: data.videoUrl })
       });
