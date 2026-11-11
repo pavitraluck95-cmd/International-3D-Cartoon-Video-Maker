@@ -219,6 +219,8 @@ function App() {
       <div style={{ fontSize: 48 }}>🎬</div>
       <h2>आपकी 3D वीडियो तैयार हो रही है</h2>
       <p style={{ color: "#ffe1a0", lineHeight: 1.7 }}>{busy ? "कृपया ऐप खुला रखें। " + status : status}</p>
+      <button type="button" onClick={openVoiceSettings} style={{ padding: "12px 16px", borderRadius: 10, background: "#3b4d70", color: "#fff", fontWeight: 800 }}>🎙️ AI हिंदी आवाज़ सेट करें</button>
+      <p style={{ color: "#aebbd0", fontSize: 12 }}>VoxSherpa को डिफ़ॉल्ट TTS चुनने और हिंदी Piper मॉडल डाउनलोड करने के बाद ऐप बंद करके दोबारा खोलें।</p>
       {!busy && <button onClick={createWholeCartoon} style={{ padding: "14px 22px", borderRadius: 12, fontWeight: 800 }}>🔄 दोबारा वीडियो बनाएं</button>}
       <p style={{ color: "#aebbd0", fontSize: 13 }}>वीडियो पहले ऐप की Library में सेव होगी। Gallery में केवल आपके बटन दबाने पर जाएगी।</p>
     </section> : <>
