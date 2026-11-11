@@ -108,7 +108,7 @@ function App(){
  return <main style={{maxWidth:760,margin:"auto",padding:16,color:"#fff",fontFamily:"system-ui"}}>
  <a href="/editor.html" style={{color:"#ffd36c"}}>← मुख्य वीडियो मेकर</a><h2>🎭 असली 3D MP4 टेस्ट</h2>
  <p style={{color:"#b9c6dc"}}>इसमें 3D मोहन और बकरी चलेंगे, हाथ-पैर हिलाएँगे और चेहरे के भाव बदलेंगे। यह 30 सेकंड का परीक्षण है।</p>
- <div ref={host} style={{width:"100%",aspectRatio:"16/9",borderRadius:14,overflow:"hidden",border:"1px solid #43516b"}}/>
+ <div ref={host} style={{width:"100%",aspectRatio:"9/16",maxWidth:360,margin:"0 auto",borderRadius:14,overflow:"hidden",border:"1px solid #43516b"}}/>
  <p style={{color:"#ffe1a0",lineHeight:1.6}}>{status}</p>
  <button disabled={busy||!scene.current} onClick={create} style={{width:"100%",padding:15,borderRadius:12,border:0,background:busy?"#596579":"#16a085",color:"#fff",fontSize:16,fontWeight:800}}>{busy?"कृपया प्रतीक्षा करें…":"🎬 3D हिंदी MP4 बनाएं (30 सेकंड)"}</button>
  <p style={{fontSize:12,color:"#9eacc3"}}>रिकॉर्डिंग 640×360 पर हल्की रखी गई है ताकि कम RAM वाले फोन पर भी परीक्षण हो सके। 3D मॉडल की मुँह-गति अनुमानित है, शब्द-अनुसार सटीक लिप-सिंक नहीं।</p>
