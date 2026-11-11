@@ -75,8 +75,9 @@ function buildScene(mount){
   return {renderer,canvas:renderer.domElement,stop(){cancelAnimationFrame(raf);renderer.dispose();scene.traverse(o=>{o.geometry?.dispose();if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());});}};
 }
 function App(){
- const host=useRef(null),scene=useRef(null),[busy,setBusy]=useState(false),[status,setStatus]=useState("30 सेकंड का 3D वीडियो टेस्ट तैयार है।");
- useEffect(()=>{try{if(host.current)scene.current=buildScene(host.current);}catch(e){setStatus("फोन में 3D WebGL उपलब्ध नहीं: "+e.message);}return()=>scene.current?.stop();},[]);
+ const host=useRef(null),scene=useRef(null),[busy,setBusy]=useState(false),[sceneReady,setSceneReady]=useState(false),[status,setStatus]=useState("30 सेकंड का 3D वीडियो टेस्ट तैयार है।");
+ useEffect(()=>{try{if(host.current){scene.current=buildScene(host.current);setSceneReady(true);setStatus("3D किरदार तैयार हैं। वीडियो बनाना शुरू हो सकता है।");}}catch(e){setStatus("फोन में 3D WebGL उपलब्ध नहीं: "+e.message);}return()=>scene.current?.stop();},[]);
+ useEffect(()=>{if(sceneReady&&new URLSearchParams(window.location.search).get("embedded")==="1"&&!busy){create();}},[sceneReady]);
  async function create(){
   if(!scene.current)return;
   setBusy(true);
