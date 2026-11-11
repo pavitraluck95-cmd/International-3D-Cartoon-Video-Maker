@@ -194,7 +194,7 @@ jobs:
                   values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4");
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     values.put(MediaStore.Video.Media.RELATIVE_PATH,
-                      Environment.DIRECTORY_MOVIES + "/International 2D Cartoon Video Maker");
+                      Environment.DIRECTORY_MOVIES + "/International 3D Cartoon Video Maker");
                     values.put(MediaStore.Video.Media.IS_PENDING, 1);
                   }
                   pendingUri = getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values);
