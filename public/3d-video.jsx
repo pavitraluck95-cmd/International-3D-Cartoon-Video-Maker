@@ -97,8 +97,8 @@ function App(){
    const response=await fetch(API+"/api/render-3d-mp4",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({video:videoData,narration:voice})});
    if(!response.ok){let d={};try{d=await response.json();}catch{}throw new Error(d.error||"सर्वर MP4 नहीं बना पाया।");}
    const mp4=await response.blob();if(mp4.size<50000||mp4.type!=="video/mp4")throw new Error("सही MP4 फ़ाइल नहीं मिली।");
-   const url=URL.createObjectURL(mp4);const a=document.createElement("a");a.href=url;a.download="international-3d-cartoon-test.mp4";a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
-   setStatus("🎉 30 सेकंड की 3D हिंदी MP4 तैयार है और डाउनलोड शुरू हो गया है।");
+   if(window.parent && window.parent !== window){ window.parent.postMessage({type:"international-3d-mp4",blob:mp4},window.location.origin); setStatus("🎉 3D MP4 मुख्य ऐप को भेज दी गई है। Library में सेव हो रही है…"); }
+   else { const url=URL.createObjectURL(mp4);const a=document.createElement("a");a.href=url;a.download="international-3d-cartoon-test.mp4";a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);setStatus("🎉 30 सेकंड की 3D हिंदी MP4 तैयार है और डाउनलोड शुरू हो गया है।"); }
   }catch(e){setStatus("वीडियो नहीं बन पाई: "+(e.message||"अज्ञात समस्या"));}
   finally{setBusy(false);}
  }

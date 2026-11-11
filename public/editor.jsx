@@ -150,9 +150,26 @@ function App() {
   const [idea, setIdea] = useState(() => params.get("idea") || "");
   const [autoStarted, setAutoStarted] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState("एक क्लिक: AI कहानी + डायलॉग + 2D दृश्य → MP4 → ऐप की Library।");
+  const [status, setStatus] = useState("एक क्लिक: 3D किरदार + हिंदी आवाज़ → MP4 → ऐप की Library।");
   const [storyInfo, setStoryInfo] = useState(null);
   const [savedVideos, setSavedVideos] = useState([]);
+  const [show3d, setShow3d] = useState(false);
+
+  useEffect(() => {
+    const receive3d = async (event) => {
+      if (event.origin !== window.location.origin || event.data?.type !== "international-3d-mp4" || !(event.data.blob instanceof Blob)) return;
+      try {
+        setStatus("3D MP4 ऐप की Library में सेव हो रही है…");
+        const filename = "international-3d-cartoon-" + Date.now() + ".mp4";
+        await saveVideoToLibrary(event.data.blob, filename, 30);
+        await refreshSavedVideos();
+        setStatus("🎉 असली 3D हिंदी MP4 ऐप की Library में सेव हो गई है। Gallery में भेजने के लिए अपना बटन दबाएँ।");
+        setShow3d(false);
+      } catch (error) { setStatus("3D वीडियो Library में सेव नहीं हुई: " + error.message); }
+    };
+    window.addEventListener("message", receive3d);
+    return () => window.removeEventListener("message", receive3d);
+  }, []);
 
   useEffect(() => {
     readVideoLibrary().then(setSavedVideos).catch(error => {
@@ -179,54 +196,8 @@ function App() {
   }
 
   async function createWholeCartoon() {
-    const prompt = idea.trim() || "चालाक पप्पू और भूतिया लड्डू: गाँव में पप्पू को एक ऐसा लड्डू मिलता है जिसे खाते ही अजीब-अजीब आवाज़ें निकलती हैं।";
-    setBusy(true);
-    setStoryInfo(null);
-    setStatus("चरण 1/5: AI Director हिंदी कहानी और डायलॉग लिख रहा है…");
-    try {
-      const response = await fetch("https://international-3d-cartoon-video-maker.onrender.com/api/ai-director", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea: prompt })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "AI अभी उपलब्ध नहीं है।");
-      setStoryInfo(data);
-      setStatus("चरण 2/5: " + (data.imagesCreated || 0) + "/10 2D तस्वीरें बनीं।");
-      if (data.storyComplete !== true || !Array.isArray(data.scenes) || data.scenes.length !== 10) {
-        throw new Error(data.warning || "10 पूरे दृश्य नहीं मिले।");
-      }
-      setStatus("चरण 3/5: फोन की हिंदी आवाज़ में डायलॉग तैयार हो रहे हैं…");
-      const narration = await makeHindiNarration(data);
-      if (!narration) throw new Error("इस APK में हिंदी आवाज़ की सुविधा उपलब्ध नहीं है। MP4 नहीं बनाई गई।");
-      setStatus("चरण 4/5: 10 दृश्यों और हिंदी डायलॉग से MP4 बन रही है…");
-      const renderResponse = await fetch("https://international-3d-cartoon-video-maker.onrender.com/api/render-mp4", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenes: data.scenes, narration })
-      });
-      if (!renderResponse.ok) {
-        let detail = "सर्वर MP4 नहीं बना पाया।";
-        try {
-          const failure = await renderResponse.json();
-          detail = failure.error || detail;
-        } catch (_) {}
-        throw new Error(detail);
-      }
-      const mp4 = await renderResponse.blob();
-      if (mp4.size < 50000 || mp4.type !== "video/mp4") {
-        throw new Error("सर्वर से सही MP4 फाइल नहीं मिली।");
-      }
-      const filename = "international-2d-comedy-" + Date.now() + ".mp4";
-      setStatus("चरण 5/5: MP4 ऐप की निजी Library में सेव हो रही है…");
-      await saveVideoToLibrary(mp4, filename, 600);
-      await refreshSavedVideos();
-      setStatus("10 मिनट की MP4 हिंदी आवाज़ सहित ऐप की Library में सेव हो गई है। Gallery में भेजने के लिए नीचे वाला बटन आप खुद दबाएँ।");
-    } catch (error) {
-      setStatus(error.message || "मुफ्त AI कहानी/2D तस्वीरें तैयार नहीं कर पाया।");
-    } finally {
-      setBusy(false);
-    }
+    setStatus("मुख्य ऐप में 3D किरदारों की रिकॉर्डिंग तैयार की जा रही है…");
+    setShow3d(true);
   }
 
   useEffect(() => {
@@ -238,14 +209,14 @@ function App() {
   return <div className="editor-app">
     {isOneClick ? <section style={{ padding: "32px 20px", textAlign: "center", maxWidth: 560, margin: "8vh auto" }}>
       <div style={{ fontSize: 48 }}>🎬</div>
-      <h2>आपकी 2D वीडियो तैयार हो रही है</h2>
+      <h2>आपकी 3D वीडियो तैयार हो रही है</h2>
       <p style={{ color: "#ffe1a0", lineHeight: 1.7 }}>{busy ? "कृपया ऐप खुला रखें। " + status : status}</p>
       {!busy && <button onClick={createWholeCartoon} style={{ padding: "14px 22px", borderRadius: 12, fontWeight: 800 }}>🔄 दोबारा वीडियो बनाएं</button>}
       <p style={{ color: "#aebbd0", fontSize: 13 }}>वीडियो पहले ऐप की Library में सेव होगी। Gallery में केवल आपके बटन दबाने पर जाएगी।</p>
     </section> : <>
       <header className="editor-header">
         <a href="/" className="back-link">← मुख्य ऐप</a>
-        <div><strong>😂 2D कॉमेडी कार्टून वीडियो मेकर</strong><small>हिंदी कहानी + डायलॉग + 2D दृश्य + MP4</small></div>
+        <div><strong>🎭 3D कॉमेडी कार्टून वीडियो मेकर</strong><small>चलते 3D किरदार + हिंदी आवाज़ + MP4</small></div>
       </header>
       <section className="director-bar">
         <div className="director-actions">
@@ -259,9 +230,10 @@ function App() {
         </details>
         <p className="editor-status">{status}</p>
         {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"} · 2D तस्वीरें: {storyInfo.imagesCreated || 0}/10</p>}
-        <p className="editor-note">यह चैट ऐप नहीं है। बटन दबाने पर उपलब्ध मुफ्त AI Director कहानी और संवाद तैयार करने की कोशिश करेगा। अभी वीडियो में 10 स्थिर 2D दृश्य और APK की Android हिंदी Text-to-Speech आवाज़ इस्तेमाल होती है; पूरी frame-by-frame animation और बैकग्राउंड संगीत शामिल नहीं हैं। मुफ्त AI इंजन की उपलब्धता की गारंटी नहीं है।</p>
+        <p className="editor-note">मुख्य बटन अब 30 सेकंड का वास्तविक 3D MP4 बनाता है। 3D रिकॉर्डिंग फोन पर होती है, फिर हिंदी आवाज़ के साथ MP4 बनाकर इसी ऐप की Library में सेव होती है। यह शुरुआती 3D परीक्षण है; पूरी कहानी के अनेक दृश्यों में विस्तार अगला चरण है।</p>
       </section>
     </>}
+    {show3d && <section style={{ maxWidth: 900, margin: "18px auto", padding: 12, border: "1px solid #16a085", borderRadius: 14, background: "#111827" }}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 6px"}}><strong>🎭 3D वीडियो निर्माण</strong><button onClick={() => setShow3d(false)}>बंद करें</button></div><iframe title="3D MP4 निर्माता" src="/3d-video.html?embedded=1" style={{width:"100%",height:680,border:0,borderRadius:10,background:"#0b1020"}} allow="autoplay" /></section>}
     <section style={{ maxWidth: 900, margin: "18px auto", padding: 18, border: "1px solid #46536a", borderRadius: 14, background: "#111827" }}>
       <h3>📁 मेरे सेव किए वीडियो ({savedVideos.length})</h3>
       {savedVideos.length === 0 ? <p>अभी कोई तैयार MP4 नहीं है।</p> : savedVideos.map(item => <div key={item.id} style={{ padding: "12px 0", borderTop: "1px solid #374151" }}>
