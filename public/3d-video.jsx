@@ -3,7 +3,9 @@ import { createRoot } from "react-dom/client";
 import * as THREE from "three";
 
 const API = "https://international-3d-cartoon-video-maker.onrender.com";
-const SCRIPT = "नमस्ते दोस्तों! आज मोहन गाँव में अपनी नई साइकिल दिखाने निकला। रास्ते में उसे एक शरारती बकरी मिली। बकरी ने उसकी टोपी खींच ली और मोहन उसके पीछे दौड़ पड़ा। आखिर में दोनों दोस्त बन गए और पूरा गाँव हँसने लगा।";
+const params = new URLSearchParams(window.location.search);
+const IDEA = (params.get("idea") || "मोहन और शरारती बकरी").trim().slice(0, 140);
+const SCRIPT = `नमस्ते दोस्तों! आज की कहानी है ${IDEA}। मोहन गाँव में निकला तो उसे एक मजेदार परेशानी मिली। उसने हिम्मत और समझदारी से उसका हल निकाला। आखिर में सभी दोस्त बन गए और पूरा गाँव हँसने लगा।`;
 function wait(ms){return new Promise(r=>setTimeout(r,ms));}
 async function makeVoice(){
   if(!window.AndroidTTS?.synthesize) throw new Error("इस APK में हिंदी आवाज़ की सुविधा उपलब्ध नहीं है।");
@@ -24,9 +26,9 @@ async function makeVoice(){
 }
 function buildScene(mount){
   const renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,preserveDrawingBuffer:false});
-  renderer.setPixelRatio(1); renderer.setSize(640,360,false); renderer.setClearColor(0x9bd6f2); mount.appendChild(renderer.domElement);
+  renderer.setPixelRatio(1); renderer.setSize(360,640,false); renderer.setClearColor(0x9bd6f2); mount.appendChild(renderer.domElement);
   const scene=new THREE.Scene(); scene.background=new THREE.Color(0x9bd6f2); scene.fog=new THREE.Fog(0x9bd6f2,12,28);
-  const camera=new THREE.PerspectiveCamera(38,640/360,.1,60);camera.position.set(0,2.6,8.6);camera.lookAt(0,1.5,0);
+  const camera=new THREE.PerspectiveCamera(38,360/640,.1,60);camera.position.set(0,3.1,9.2);camera.lookAt(0,1.5,0);
   scene.add(new THREE.HemisphereLight(0xffffff,0x63734c,2));
   const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(-4,7,5);scene.add(sun);
   const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.78});
