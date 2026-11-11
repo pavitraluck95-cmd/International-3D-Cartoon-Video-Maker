@@ -127,7 +127,13 @@ function App(){
    const mp4=await response.blob();if(mp4.size<50000||mp4.type!=="video/mp4")throw new Error("सही MP4 फ़ाइल नहीं मिली।");
    if(window.parent && window.parent !== window){ window.parent.postMessage({type:"international-3d-mp4",blob:mp4},window.location.origin); setStatus("🎉 3D MP4 मुख्य ऐप को भेज दी गई है। Library में सेव हो रही है…"); }
    else { const url=URL.createObjectURL(mp4);const a=document.createElement("a");a.href=url;a.download="international-3d-cartoon-test.mp4";a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);setStatus("🎉 30 सेकंड की 3D हिंदी MP4 तैयार है और डाउनलोड शुरू हो गया है।"); }
-  }catch(e){setStatus("वीडियो नहीं बन पाई: "+(e.message||"अज्ञात समस्या"));}
+  }catch(e){
+   const message=e.message||"अज्ञात समस्या";
+   setStatus("वीडियो नहीं बन पाई: "+message);
+   if(window.parent&&window.parent!==window){
+    window.parent.postMessage({type:"international-3d-error",message},window.location.origin);
+   }
+  }
   finally{setBusy(false);}
  }
  return <main style={{maxWidth:760,margin:"auto",padding:16,color:"#fff",fontFamily:"system-ui"}}>
