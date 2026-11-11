@@ -140,6 +140,32 @@ app.post("/api/generate", async (req, res) => {
 });
 
 
+// Safely proxy generated Hugging Face video files so the mobile app can save them.
+app.post("/api/download-ai-video", async (req, res) => {
+  const videoUrl = typeof req.body?.videoUrl === "string" ? req.body.videoUrl : "";
+  let parsed;
+  try { parsed = new URL(videoUrl); } catch { return res.status(400).json({ error: "AI वीडियो लिंक सही नहीं है।" }); }
+  if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".hf.space")) {
+    return res.status(400).json({ error: "सुरक्षा कारणों से यह वीडियो स्रोत स्वीकार नहीं है।" });
+  }
+  try {
+    const response = await fetch(parsed.href, { signal: AbortSignal.timeout(90000) });
+    if (!response.ok) return res.status(502).json({ error: "AI वीडियो फ़ाइल डाउनलोड नहीं हो पाई।" });
+    const type = response.headers.get("content-type") || "video/mp4";
+    if (!type.includes("video") && !type.includes("octet-stream")) {
+      return res.status(502).json({ error: "AI इंजन ने वीडियो फ़ाइल के बजाय दूसरा परिणाम दिया।" });
+    }
+    res.setHeader("Content-Type", type.includes("video") ? type : "video/mp4");
+    res.setHeader("Cache-Control", "no-store");
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (!bytes.length || bytes.length > 80 * 1024 * 1024) return res.status(502).json({ error: "AI वीडियो फ़ाइल खाली या बहुत बड़ी है।" });
+    return res.send(bytes);
+  } catch (error) {
+    console.error("AI video proxy failed:", error?.name, error?.message);
+    return res.status(502).json({ error: "AI वीडियो डाउनलोड में समय लग गया।" });
+  }
+});
+
 // Image-to-video through the public Wan2.2 ZeroGPU Space.
 // Images are sent only for this generation request; they are not stored by this app.
 app.post("/api/animate-image", async (req, res) => {
