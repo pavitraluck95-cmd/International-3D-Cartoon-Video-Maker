@@ -106,13 +106,21 @@ jobs:
                     ttsReady = false;
                   }
                 }
+                installTtsListener();
               });
+
+            }
+            private void installTtsListener() {
+              if (hindiTts == null) return;
               hindiTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override public void onStart(String id) {}
                 @Override public void onError(String id) { sendTtsError(id, "Android हिंदी आवाज़ उपलब्ध नहीं है।"); }
+                @Override public void onError(String id, int errorCode) { sendTtsError(id, "Android हिंदी आवाज़ त्रुटि: " + errorCode); }
+                @Override public void onStop(String id, boolean interrupted) { sendTtsError(id, "हिंदी आवाज़ बीच में रुक गई।"); }
                 @Override public void onDone(String id) {
                   try {
                     File audio = new File(getCacheDir(), id + ".wav");
+                    if (!audio.exists() || audio.length() < 44) { sendTtsError(id, "Android ने हिंदी ऑडियो फ़ाइल नहीं बनाई।"); return; }
                     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                     try (FileInputStream input = new FileInputStream(audio)) { byte[] temp = new byte[8192]; int count; while ((count = input.read(temp)) != -1) buffer.write(temp, 0, count); }
                     byte[] bytes = buffer.toByteArray();
@@ -129,6 +137,7 @@ jobs:
                 }
               });
             }
+
             private void sendTtsError(String id, String message) {
               String safe = message.replace("'", "\\'");
               getBridge().getWebView().post(() -> getBridge().getWebView().evaluateJavascript(
