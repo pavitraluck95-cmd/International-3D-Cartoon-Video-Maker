@@ -249,6 +249,7 @@ function App() {
       </header>
       <section className="director-bar">
         <div className="director-actions">
+          <a href="/3d-test.html" style={{ display:"inline-block", padding:"10px 13px", borderRadius:9, background:"#253b5b", color:"#fff", fontWeight:800, fontSize:13, textDecoration:"none" }}>🎭 3D कार्टून टेस्ट</a>
           <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "🎬 मेरी आज की 2D वीडियो तैयार करो"}</button>
         </div>
         <details style={{ marginTop: 12 }}>

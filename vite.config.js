@@ -14,7 +14,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(publicRoot, "index.html"),
-        editor: resolve(publicRoot, "editor.html")
+        editor: resolve(publicRoot, "editor.html"),
+        threeTest: resolve(publicRoot, "3d-test.html")
       }
     }
   }
