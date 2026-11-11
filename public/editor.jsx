@@ -230,7 +230,7 @@ function App() {
   }
 
   useEffect(() => {
-    if (autoStarted || !isOneClick || !params.get("idea")) return;
+    if (autoStarted || !isOneClick) return;
     setAutoStarted(true);
     createWholeCartoon();
   }, [autoStarted]);
