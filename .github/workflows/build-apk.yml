@@ -147,7 +147,7 @@ jobs:
               @JavascriptInterface public void openTtsSettings() {
                 runOnUiThread(() -> {
                   try {
-                    Intent intent = new Intent(Settings.ACTION_TTS_SETTINGS);
+                    Intent intent = new Intent("com.android.settings.TTS_SETTINGS");
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(intent);
                   } catch (Exception error) {

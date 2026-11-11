@@ -232,7 +232,7 @@ function App() {
         <div className="director-actions">
           <button type="button" onClick={openVoiceSettings} style={{ padding: "10px 13px", borderRadius: 9, background: "#3b4d70", color: "#fff", fontWeight: 800, fontSize: 13 }}>🎙️ AI हिंदी आवाज़ सेट करें</button>
           <a href="/3d-video.html" style="display:inline-block; padding:10px 13px; border-radius:9px; background:#176b58; color:#fff; font-weight:800; font-size:13px; text-decoration:none">🎬 3D MP4 टेस्ट (30 सेकंड)</a><a href="/3d-test.html" style={{ display:"inline-block", padding:"10px 13px", borderRadius:9, background:"#253b5b", color:"#fff", fontWeight:800, fontSize:13, textDecoration:"none" }}>🎭 3D कार्टून टेस्ट</a>
-          <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "🎬 मेरी आज की 2D वीडियो तैयार करो"}</button>
+          <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "🎬 मेरी आज की 3D वीडियो तैयार करो"}</button>
         </div>
         <details style={{ marginTop: 12 }}>
           <summary style={{ cursor: "pointer", color: "#cbd5e1" }}>विषय बदलना चाहें? (वैकल्पिक)</summary>
