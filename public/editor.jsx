@@ -165,15 +165,25 @@ function App() {
 
   useEffect(() => {
     const receive3d = async (event) => {
-      if (event.origin !== window.location.origin || event.data?.type !== "international-3d-mp4" || !(event.data.blob instanceof Blob)) return;
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === "international-3d-error") {
+        setBusy(false);
+        setStatus("वीडियो नहीं बन पाई: " + (event.data.message || "अज्ञात समस्या"));
+        return;
+      }
+      if (event.data?.type !== "international-3d-mp4" || !(event.data.blob instanceof Blob)) return;
       try {
         setStatus("3D MP4 ऐप की Library में सेव हो रही है…");
         const filename = "international-3d-cartoon-" + Date.now() + ".mp4";
         await saveVideoToLibrary(event.data.blob, filename, 30);
         await refreshSavedVideos();
-        setStatus("🎉 असली 3D हिंदी MP4 ऐप की Library में सेव हो गई है। Gallery में भेजने के लिए अपना बटन दबाएँ।");
+        setStatus("🎉 3D हिंदी MP4 ऐप की Library में सेव हो गई है। Gallery में भेजने के लिए अपना बटन दबाएँ।");
         setShow3d(false);
-      } catch (error) { setStatus("3D वीडियो Library में सेव नहीं हुई: " + error.message); }
+      } catch (error) {
+        setStatus("3D वीडियो Library में सेव नहीं हुई: " + error.message);
+      } finally {
+        setBusy(false);
+      }
     };
     window.addEventListener("message", receive3d);
     return () => window.removeEventListener("message", receive3d);
@@ -204,7 +214,9 @@ function App() {
   }
 
   async function createWholeCartoon() {
-    setStatus("मुख्य ऐप में 3D किरदारों की रिकॉर्डिंग तैयार की जा रही है…");
+    if (busy) return;
+    setBusy(true);
+    setStatus("3D किरदारों की रिकॉर्डिंग, हिंदी आवाज़ और MP4 तैयार की जा रही है…");
     setShow3d(true);
   }
 
