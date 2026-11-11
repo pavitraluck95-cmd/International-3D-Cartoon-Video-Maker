@@ -7,7 +7,7 @@ const sharp = require("sharp");
 const path = require("path");
 const app = express();
 const port = process.env.PORT || 3000;
-app.use(express.json({ limit: "30mb" }));
+app.use(express.json({ limit: "50mb" }));
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   const allowed = ["capacitor://localhost", "http://localhost", "https://localhost", "https://international-3d-cartoon-video-maker.onrender.com"];
@@ -400,6 +400,40 @@ app.post("/api/render-mp4", async (req, res) => {
     console.error("MP4 render failed:", error && error.message);
     await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
     if (!res.headersSent) res.status(500).json({ error: "MP4 नहीं बन सकी: " + (error.message || "encoder error") });
+  }
+});
+
+
+// Render a short real-time Three.js canvas recording into an MP4 with Android Hindi narration.
+app.post("/api/render-3d-mp4", async (req, res) => {
+  const videoData = typeof req.body?.video === "string" ? req.body.video : "";
+  const narration = typeof req.body?.narration === "string" ? req.body.narration : "";
+  const videoMatch = videoData.match(/^data:video\/webm;base64,([A-Za-z0-9+/=]+)$/);
+  const audioMatch = narration.match(/^data:audio\/(?:wav|x-wav);base64,([A-Za-z0-9+/=]+)$/);
+  if (!videoMatch || !audioMatch) return res.status(400).json({ error: "3D वीडियो या हिंदी WAV आवाज़ सही फ़ॉर्मेट में नहीं मिली।" });
+  const video = Buffer.from(videoMatch[1], "base64");
+  const audio = Buffer.from(audioMatch[1], "base64");
+  if (video.length < 20000 || video.length > 35 * 1024 * 1024) return res.status(400).json({ error: "3D रिकॉर्डिंग अधूरी है या 35 MB से बड़ी है।" });
+  if (audio.length < 44 || audio.length > 12 * 1024 * 1024 || audio.toString("ascii",0,4) !== "RIFF" || audio.toString("ascii",8,12) !== "WAVE") return res.status(400).json({ error: "हिंदी WAV आवाज़ अधूरी या अमान्य है।" });
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cartoon-3d-"));
+  try {
+    const videoFile = path.join(dir, "animation.webm");
+    const audioFile = path.join(dir, "voice.wav");
+    const output = path.join(dir, "international-3d-test.mp4");
+    await fs.writeFile(videoFile, video);
+    await fs.writeFile(audioFile, audio);
+    await runFfmpeg(["-y","-i",videoFile,"-i",audioFile,"-map","0:v:0","-map","1:a:0","-t","30","-vf","scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=24","-c:v","libx264","-preset","ultrafast","-pix_fmt","yuv420p","-c:a","aac","-b:a","96k","-shortest","-movflags","+faststart",output]);
+    const stat = await fs.stat(output);
+    if (stat.size < 50000) throw new Error("3D MP4 फाइल अधूरी बनी।");
+    res.setHeader("Content-Type","video/mp4");
+    res.setHeader("Content-Length",stat.size);
+    res.setHeader("Content-Disposition",'attachment; filename="international-3d-test.mp4"');
+    require("fs").createReadStream(output).pipe(res);
+    res.on("close",()=>fs.rm(dir,{recursive:true,force:true}).catch(()=>{}));
+  } catch (error) {
+    console.error("3D MP4 render failed:",error?.message);
+    await fs.rm(dir,{recursive:true,force:true}).catch(()=>{});
+    if (!res.headersSent) res.status(500).json({error:"3D MP4 नहीं बन सकी: "+(error?.message||"encoder error")});
   }
 });
 
