@@ -35,6 +35,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Sync latest source before build
+        run: |
+          git fetch origin main
+          git rebase origin/main
+
       - name: Build web app
         run: npm run build
 
