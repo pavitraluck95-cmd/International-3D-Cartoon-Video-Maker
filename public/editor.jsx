@@ -216,8 +216,41 @@ function App() {
   async function createWholeCartoon() {
     if (busy) return;
     setBusy(true);
-    setStatus("3D किरदारों की रिकॉर्डिंग, हिंदी आवाज़ और MP4 तैयार की जा रही है…");
-    setShow3d(true);
+    setShow3d(false);
+    setStatus("मुफ़्त AI इंजन से असली 3D वीडियो क्लिप बन रही है… GPU की कतार में समय लग सकता है।");
+    try {
+      const prompt = [
+        "Create a polished high-quality cinematic 3D animated family comedy scene, vertical 9:16.",
+        "Two original fictional adult Indian village friends, expressive faces, detailed stylized 3D character models, natural body movement, clear gestures, expressive acting, believable eye and mouth movement, colorful detailed village street, cinematic lighting, smooth camera motion.",
+        "Hindi comedy scene: " + (idea.trim() || "दो दोस्तों के बीच मजेदार गलतफहमी और हँसी वाला छोटा दृश्य"),
+        "No 2D drawings, no still slideshow, no text, no subtitles, no logos, no celebrity likeness, original fictional characters only."
+      ].join(" ");
+      const generated = await fetch(API + "/api/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await generated.json().catch(() => ({}));
+      if (!generated.ok || !data.videoUrl) throw new Error(data.error || "AI इंजन वीडियो नहीं बना पाया।");
+      setStatus("AI क्लिप बन गई है। अब MP4 ऐप की Library में सेव हो रही है…");
+      const fileResponse = await fetch(API + "/api/download-ai-video", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoUrl: data.videoUrl })
+      });
+      if (!fileResponse.ok) {
+        const detail = await fileResponse.json().catch(() => ({}));
+        throw new Error(detail.error || "AI वीडियो डाउनलोड नहीं हो पाई।");
+      }
+      const blob = await fileResponse.blob();
+      if (blob.size < 20000 || !blob.type.includes("video")) throw new Error("AI इंजन से वैध वीडियो फ़ाइल नहीं मिली।");
+      const filename = "international-ai-3d-" + Date.now() + ".mp4";
+      await saveVideoToLibrary(blob, filename, Number(data.durationSeconds) || 3);
+      await refreshSavedVideos();
+      setStatus("🎉 असली AI से बनी छोटी 3D MP4 क्लिप Library में सेव हो गई है। अभी इंजन लगभग 3 सेकंड की क्लिप देता है; पूरी 30 सेकंड/1–3 मिनट कहानी अभी उपलब्ध नहीं है।");
+    } catch (error) {
+      setStatus("AI वीडियो नहीं बन पाई: " + (error.message || "मुफ़्त साझा GPU व्यस्त हो सकता है।"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -253,7 +286,7 @@ function App() {
         </details>
         <p className="editor-status">{status}</p>
         {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"}</p>}
-        <p className="editor-note">मुख्य बटन अब 30 सेकंड का वास्तविक 3D MP4 बनाता है। 3D रिकॉर्डिंग फोन पर होती है, फिर हिंदी आवाज़ के साथ MP4 बनाकर इसी ऐप की Library में सेव होती है। यह शुरुआती 3D परीक्षण है; पूरी कहानी के अनेक दृश्यों में विस्तार अगला चरण है।</p>
+        <p className="editor-note">मुख्य बटन अब मुफ्त AI इंजन से वास्तविक AI वीडियो क्लिप बनाने की कोशिश करता है और MP4 को Library में सेव करता है। मुफ्त साझा GPU की उपलब्धता निश्चित नहीं है; अभी इंजन केवल लगभग 3 सेकंड की क्लिप देता है, पूरी लंबी कहानी नहीं।</p>
       </section>
     </>}
     {show3d && <section style={{ maxWidth: 900, margin: "18px auto", padding: 12, border: "1px solid #16a085", borderRadius: 14, background: "#111827" }}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 6px"}}><strong>🎭 3D वीडियो निर्माण</strong><button onClick={() => setShow3d(false)}>बंद करें</button></div><iframe title="3D MP4 निर्माता" src={`/3d-video.html?embedded=1&idea=${encodeURIComponent(idea || "मोहन और शरारती बकरी")}`} style={{width:"100%",height:680,border:0,borderRadius:10,background:"#0b1020"}} allow="autoplay" /></section>}
