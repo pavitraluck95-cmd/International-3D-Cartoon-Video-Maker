@@ -78,8 +78,31 @@ jobs:
               getBridge().getWebView().post(() -> getBridge().getWebView().reload());
               hindiTts = new TextToSpeech(this, status -> {
                 if (status == TextToSpeech.SUCCESS) {
-                  int lang = hindiTts.setLanguage(new Locale("hi", "IN"));
-                  ttsReady = lang != TextToSpeech.LANG_MISSING_DATA && lang != TextToSpeech.LANG_NOT_SUPPORTED;
+                  Locale hindi = new Locale("hi", "IN");
+                  int lang = hindiTts.setLanguage(hindi);
+                  if (lang != TextToSpeech.LANG_MISSING_DATA && lang != TextToSpeech.LANG_NOT_SUPPORTED) {
+                    // Prefer the clearest installed Hindi (India) voice; avoid network-only voices.
+                    android.speech.tts.Voice best = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                      java.util.Set<android.speech.tts.Voice> voices = hindiTts.getVoices();
+                      if (voices != null) {
+                        for (android.speech.tts.Voice voice : voices) {
+                          Locale locale = voice.getLocale();
+                          if (locale != null && "hi".equalsIgnoreCase(locale.getLanguage())
+                              && !voice.isNetworkConnectionRequired()
+                              && (best == null || voice.getQuality() > best.getQuality())) {
+                            best = voice;
+                          }
+                        }
+                      }
+                      if (best != null) hindiTts.setVoice(best);
+                    }
+                    hindiTts.setSpeechRate(0.82f);
+                    hindiTts.setPitch(1.0f);
+                    ttsReady = true;
+                  } else {
+                    ttsReady = false;
+                  }
                 }
               });
               hindiTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
