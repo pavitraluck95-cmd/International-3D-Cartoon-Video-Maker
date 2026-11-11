@@ -33,6 +33,18 @@ function buildScene(mount){
   const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(-4,7,5);scene.add(sun);
   const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.78});
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(30,30),mat(0x78b86b));ground.rotation.x=-Math.PI/2;ground.position.y=-.06;scene.add(ground);
+  // Stylized village environment with depth and layered scenery.
+  const path=new THREE.Mesh(new THREE.PlaneGeometry(2.1,18),mat(0xc9a878));path.rotation.x=-Math.PI/2;path.position.set(.2,.005,-3);scene.add(path);
+  const treeMat=mat(0x397c4c),trunkMat=mat(0x805238);
+  for(const [x,z] of [[-5,-1],[5,-2],[-5,-6],[5,-7]]){
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.12,.18,1.4,7),trunkMat);trunk.position.set(x,.7,z);scene.add(trunk);
+    for(let j=0;j<3;j++){const crown=new THREE.Mesh(new THREE.SphereGeometry(.72-j*.08,10,8),treeMat);crown.position.set(x+(j-1)*.3,1.55+j*.22,z);scene.add(crown);}
+  }
+  const cloudMat=new THREE.MeshBasicMaterial({color:0xffffff});
+  for(const [x,y,z] of [[-3,5,-5],[2,5.8,-7],[5,4.7,-8]])for(let j=0;j<3;j++){
+    const cloud=new THREE.Mesh(new THREE.SphereGeometry(.42,10,8),cloudMat);cloud.scale.set(1.2,.65,.7);cloud.position.set(x+(j-1)*.42,y+(j===1?.12:0),z);scene.add(cloud);
+  }
+  const sunBall=new THREE.Mesh(new THREE.SphereGeometry(.62,16,12),new THREE.MeshBasicMaterial({color:0xffdf8a}));sunBall.position.set(4.8,5.5,-9);scene.add(sunBall);
   const house=new THREE.Mesh(new THREE.BoxGeometry(2.4,1.8,1.8),mat(0xf0c98a));house.position.set(-3, .9,-2);scene.add(house);
   const roof=new THREE.Mesh(new THREE.ConeGeometry(1.9,.9,4),mat(0xb94e3f));roof.position.set(-3,2.25,-2);roof.rotation.y=Math.PI/4;scene.add(roof);
   const character=new THREE.Group();scene.add(character);
@@ -40,23 +52,36 @@ function buildScene(mount){
   const skin=mat(0xf2bd91),shirt=mat(0x17a69a),pants=mat(0x283c72),dark=mat(0x28222a),white=mat(0xffffff);
   mesh(new THREE.CapsuleGeometry(.43,.7,4,8),shirt,character,0,1.18,0);
   const head=new THREE.Group();head.position.set(0,2.25,0);character.add(head);
-  mesh(new THREE.SphereGeometry(.55,18,14),skin,head,0,0,0);
-  mesh(new THREE.SphereGeometry(.56,18,12,0,Math.PI*2,0,Math.PI*.48),dark,head,0,.18,-.02);
-  for(const x of [-.19,.19]){mesh(new THREE.SphereGeometry(.075,10,8),white,head,x,.03,.49);mesh(new THREE.SphereGeometry(.033,8,6),dark,head,x,.03,.55);}
-  const mouth=mesh(new THREE.SphereGeometry(.12,12,8),mat(0x682e36),head,0,-.22,.5);mouth.scale.set(.8,.2,.25);
-  const brow1=mesh(new THREE.BoxGeometry(.18,.035,.04),dark,head,-.2,.19,.5);
-  const brow2=mesh(new THREE.BoxGeometry(.18,.035,.04),dark,head,.2,.19,.5);
+  mesh(new THREE.SphereGeometry(.55,22,18),skin,head,0,0,0);
+  mesh(new THREE.SphereGeometry(.56,22,14,0,Math.PI*2,0,Math.PI*.48),dark,head,0,.18,-.02);
+  for(const x of [-.19,.19]){
+    mesh(new THREE.SphereGeometry(.105,12,10),skin,head,x,-.02,.43);
+    mesh(new THREE.SphereGeometry(.09,12,10),white,head,x,.045,.49);
+    mesh(new THREE.SphereGeometry(.043,10,8),mat(0x34241d),head,x,.04,.555);
+    mesh(new THREE.SphereGeometry(.016,8,6),white,head,x-.012,.06,.585);
+  }
+  const nose=mesh(new THREE.SphereGeometry(.075,12,10),mat(0xe6a17f),head,0,-.105,.52);nose.scale.set(1,.65,.65);
+  const mouth=mesh(new THREE.SphereGeometry(.12,14,10),mat(0x682e36),head,0,-.25,.49);mouth.scale.set(.8,.18,.25);
+  const brow1=mesh(new THREE.BoxGeometry(.2,.045,.055),dark,head,-.2,.2,.5);
+  const brow2=mesh(new THREE.BoxGeometry(.2,.045,.055),dark,head,.2,.2,.5);
+  const hairTuft=mesh(new THREE.SphereGeometry(.22,12,8),dark,head,0,.48,.02);hairTuft.scale.set(1.25,.65,1);
   const arms=[],legs=[];
   for(const side of [-1,1]){
     const a=new THREE.Group();a.position.set(side*.47,1.62,0);character.add(a);mesh(new THREE.CapsuleGeometry(.12,.48,3,7),shirt,a,0,-.28,0);mesh(new THREE.SphereGeometry(.13,10,8),skin,a,0,-.58,.02);arms.push(a);
     const l=new THREE.Group();l.position.set(side*.2,.72,0);character.add(l);mesh(new THREE.CapsuleGeometry(.15,.52,3,7),pants,l,0,-.29,0);mesh(new THREE.BoxGeometry(.29,.15,.4),dark,l,0,-.59,.1);legs.push(l);
   }
   const goat=new THREE.Group();scene.add(goat);goat.position.set(2,0,-.5);
-  const fur=mat(0xf4eee1),horn=mat(0x66584b);
-  mesh(new THREE.SphereGeometry(.43,16,12),fur,goat,0,.65,0);
-  mesh(new THREE.SphereGeometry(.27,14,10),fur,goat,.35,.83,.02);
-  for(const x of [-.15,.15]){mesh(new THREE.ConeGeometry(.07,.35,8),horn,goat,x,.98,-.03);}
-  const goatLegs=[];for(const x of [-.22,.22])for(const z of [-.16,.16]){const leg=mesh(new THREE.CylinderGeometry(.045,.055,.38,8),horn,goat,x,.25,z);goatLegs.push(leg);}
+  const fur=mat(0xf4eee1),horn=mat(0x66584b),goatDark=mat(0x40372f);
+  mesh(new THREE.SphereGeometry(.48,18,14),fur,goat,-.08,.65,0).scale.set(1.35,.85,.8);
+  mesh(new THREE.SphereGeometry(.29,16,12),fur,goat,.38,.88,.02);
+  mesh(new THREE.SphereGeometry(.19,14,10),fur,goat,.52,.78,.2);
+  for(const x of [-.15,.15]){
+    mesh(new THREE.ConeGeometry(.07,.35,8),horn,goat,x,.98,-.03);
+    mesh(new THREE.SphereGeometry(.045,10,8),white,goat,.48+x*.45,.91,.265);
+    mesh(new THREE.SphereGeometry(.02,8,6),goatDark,goat,.49+x*.45,.91,.3);
+  }
+  const goatTail=mesh(new THREE.ConeGeometry(.09,.28,8),fur,goat,-.67,.78,0);goatTail.rotation.z=-1.1;
+  const goatLegs=[];for(const x of [-.28,.28])for(const z of [-.16,.16]){const leg=mesh(new THREE.CylinderGeometry(.05,.06,.42,8),horn,goat,x,.25,z);goatLegs.push(leg);}
   let raf=0,start=0,recording=false;
   const animate=now=>{
     if(!start)start=now;const t=(now-start)/1000;
@@ -111,7 +136,7 @@ function App(){
  <div ref={host} style={{width:"100%",aspectRatio:"9/16",maxWidth:360,margin:"0 auto",borderRadius:14,overflow:"hidden",border:"1px solid #43516b"}}/>
  <p style={{color:"#ffe1a0",lineHeight:1.6}}>{status}</p>
  <button disabled={busy||!scene.current} onClick={create} style={{width:"100%",padding:15,borderRadius:12,border:0,background:busy?"#596579":"#16a085",color:"#fff",fontSize:16,fontWeight:800}}>{busy?"कृपया प्रतीक्षा करें…":"🎬 3D हिंदी MP4 बनाएं (30 सेकंड)"}</button>
- <p style={{fontSize:12,color:"#9eacc3"}}>रिकॉर्डिंग 640×360 पर हल्की रखी गई है ताकि कम RAM वाले फोन पर भी परीक्षण हो सके। 3D मॉडल की मुँह-गति अनुमानित है, शब्द-अनुसार सटीक लिप-सिंक नहीं।</p>
+ <p style={{fontSize:12,color:"#9eacc3"}}>वीडियो 360×640 (9:16) में बनता है। यह हल्का 3D एनीमेशन टेस्ट है; अभी असली AI वीडियो जनरेशन और शब्द-अनुसार सटीक लिप-सिंक उपलब्ध नहीं है।</p>
  </main>;
 }
 createRoot(document.getElementById("root")).render(<App/>);
