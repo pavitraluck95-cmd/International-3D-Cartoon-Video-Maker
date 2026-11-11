@@ -422,7 +422,7 @@ app.post("/api/render-3d-mp4", async (req, res) => {
     const output = path.join(dir, "international-3d-test.mp4");
     await fs.writeFile(videoFile, video);
     await fs.writeFile(audioFile, audio);
-    await runFfmpeg(["-y","-i",videoFile,"-i",audioFile,"-map","0:v:0","-map","1:a:0","-t","30","-vf","scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=24","-c:v","libx264","-preset","ultrafast","-pix_fmt","yuv420p","-c:a","aac","-b:a","96k","-shortest","-movflags","+faststart",output]);
+    await runFfmpeg(["-y","-i",videoFile,"-i",audioFile,"-map","0:v:0","-map","1:a:0","-t","30","-vf","scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=24","-c:v","libx264","-preset","ultrafast","-pix_fmt","yuv420p","-c:a","aac","-b:a","96k","-af","apad","-t","30","-movflags","+faststart",output]);
     const stat = await fs.stat(output);
     if (stat.size < 50000) throw new Error("3D MP4 फाइल अधूरी बनी।");
     res.setHeader("Content-Type","video/mp4");
