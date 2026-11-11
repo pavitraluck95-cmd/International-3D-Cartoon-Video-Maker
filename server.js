@@ -383,7 +383,7 @@ app.post("/api/render-mp4", async (req, res) => {
     const voiceFile = path.join(dir, "voice.wav");
     await fs.writeFile(voiceFile, audio);
     args.push("-i", voiceFile);
-    args.push("-vsync", "vfr", "-r", "10", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p");
+    args.push("-fps_mode", "cfr", "-r", "10", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p");
     args.push("-map", "0:v:0", "-map", "1:a:0", "-c:a", "aac", "-b:a", "96k", "-af", "apad", "-t", "600");
     args.push("-movflags", "+faststart", output);
     await runFfmpeg(args);
@@ -407,4 +407,4 @@ app.get("/editor", (_req, res) => res.sendFile(path.join(distDir, "editor.html")
 app.get("*", (_req, res) => res.sendFile(path.join(distDir, "index.html"), (err) => { if (err) res.sendFile(path.join(publicDir, "index.html")); }));
 app.listen(port, "0.0.0.0", () => console.log("App listening on " + port));
 
-// Deployment refresh marker: 2026-11-10T23:00Z; trigger Render auto-deploy for latest MP4 renderer.
+// FFmpeg fix: use CFR fps_mode with output frame rate; do not combine -r with VFR vsync.
