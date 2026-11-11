@@ -97,7 +97,7 @@ jobs:
                       }
                       if (best != null) hindiTts.setVoice(best);
                     }
-                    hindiTts.setSpeechRate(0.82f);
+                    hindiTts.setSpeechRate(1.0f);
                     hindiTts.setPitch(1.0f);
                     ttsReady = true;
                   } else {
