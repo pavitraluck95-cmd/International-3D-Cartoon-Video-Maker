@@ -463,6 +463,52 @@ app.post("/api/render-3d-mp4", async (req, res) => {
   }
 });
 
+
+// Hindi AI voice generation using the public Kokoro Voice Studio endpoint.
+// Anonymous use is subject to the provider's availability and rate limits.
+app.post("/api/ai-audio", async (req, res) => {
+  const input = typeof req.body?.input === "string" ? req.body.input.trim() : "";
+  const voice = typeof req.body?.voice === "string" ? req.body.voice : "hm_omega";
+  const allowedVoices = new Set(["hf_alpha", "hf_beta", "hm_omega", "hm_psi"]);
+  const speed = Number(req.body?.speed ?? 1);
+  if (!input) return res.status(400).json({ error: "आवाज़ बनाने के लिए हिंदी टेक्स्ट लिखें।" });
+  if (input.length > 5000) return res.status(400).json({ error: "एक बार में अधिकतम 5000 अक्षर भेजें।" });
+  if (!allowedVoices.has(voice)) return res.status(400).json({ error: "चुनी गई आवाज़ उपलब्ध नहीं है।" });
+  if (!Number.isFinite(speed) || speed < 0.5 || speed > 2) return res.status(400).json({ error: "आवाज़ की गति 0.5 से 2 के बीच रखें।" });
+  try {
+    const upstream = await fetch("https://saytts.site/v1/audio/speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "audio/mpeg, audio/*" },
+      body: JSON.stringify({ model: "kokoro", input, voice, response_format: "mp3", speed, lang: "hi" }),
+      signal: AbortSignal.timeout(120000)
+    });
+    if (!upstream.ok) {
+      const detail = (await upstream.text()).slice(0, 500);
+      console.error("Kokoro TTS upstream failed:", upstream.status, detail);
+      return res.status(502).json({ error: upstream.status === 429
+        ? "मुफ़्त AI आवाज़ सेवा की सीमा पूरी हो गई है। बाद में फिर कोशिश करें।"
+        : "AI आवाज़ सेवा अभी जवाब नहीं दे रही (HTTP " + upstream.status + ")।" });
+    }
+    const contentType = upstream.headers.get("content-type") || "";
+    if (!contentType.includes("audio") && !contentType.includes("octet-stream")) {
+      console.error("Kokoro TTS returned non-audio content:", contentType);
+      return res.status(502).json({ error: "AI सेवा से MP3 ऑडियो नहीं मिला।" });
+    }
+    const audio = Buffer.from(await upstream.arrayBuffer());
+    if (!audio.length || audio.length > 25 * 1024 * 1024) {
+      return res.status(502).json({ error: "AI ऑडियो फ़ाइल खाली या बहुत बड़ी है।" });
+    }
+    res.setHeader("Content-Type", contentType.includes("audio") ? contentType : "audio/mpeg");
+    res.setHeader("Content-Length", audio.length);
+    res.setHeader("Content-Disposition", 'attachment; filename="hindi-ai-voice.mp3"');
+    res.setHeader("Cache-Control", "no-store");
+    return res.send(audio);
+  } catch (error) {
+    console.error("Kokoro TTS request failed:", error?.name, error?.message);
+    return res.status(502).json({ error: "AI आवाज़ सेवा से संपर्क नहीं हो पाया। कृपया बाद में कोशिश करें।" });
+  }
+});
+
 app.get("/editor", (_req, res) => res.sendFile(path.join(distDir, "editor.html"), (err) => { if (err) res.sendFile(path.join(publicDir, "editor.html")); }));
 app.get("*", (_req, res) => res.sendFile(path.join(distDir, "index.html"), (err) => { if (err) res.sendFile(path.join(publicDir, "index.html")); }));
 app.listen(port, "0.0.0.0", () => console.log("App listening on " + port));
