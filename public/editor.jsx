@@ -300,19 +300,19 @@ function App() {
       <div style={{ fontSize: 48 }}>🎬</div>
       <h2>आपकी 3D वीडियो तैयार हो रही है</h2>
       <p style={{ color: "#ffe1a0", lineHeight: 1.7 }}>{busy ? "कृपया ऐप खुला रखें। " + status : status}</p>
-      <button type="button" onClick={openVoiceSettings} style={{ padding: "12px 16px", borderRadius: 10, background: "#3b4d70", color: "#fff", fontWeight: 800 }}>🎙️ AI हिंदी आवाज़ सेट करें</button>
-      <p style={{ color: "#aebbd0", fontSize: 12 }}>VoxSherpa को डिफ़ॉल्ट TTS चुनने और हिंदी Piper मॉडल डाउनलोड करने के बाद ऐप बंद करके दोबारा खोलें।</p>
+      
+      
       {!busy && <button onClick={createWholeCartoon} style={{ padding: "14px 22px", borderRadius: 12, fontWeight: 800 }}>🔄 दोबारा वीडियो बनाएं</button>}
       <p style={{ color: "#aebbd0", fontSize: 13 }}>वीडियो पहले ऐप की Library में सेव होगी। Gallery में केवल आपके बटन दबाने पर जाएगी।</p>
     </section> : <>
       <header className="editor-header">
         <a href="/" className="back-link">← मुख्य ऐप</a>
-        <div><strong>🎭 3D कॉमेडी कार्टून वीडियो मेकर</strong><small>चलते 3D किरदार + हिंदी आवाज़ + MP4</small></div>
+        <div><strong>🎭 AI कार्टून वीडियो मेकर</strong><small>एक आदेश → AI कहानी + वीडियो + हिंदी आवाज़ → MP4</small></div>
       </header>
-      <nav style={{display:"flex",gap:10,flexWrap:"wrap",padding:12,maxWidth:900,margin:"12px auto"}}><a href="#ai-video-studio" style={{padding:"11px 16px",borderRadius:10,background:"#176b58",color:"#fff",fontWeight:800,textDecoration:"none"}}>🎬 AI वीडियो जनरेटर</a><a href="#ai-voice-studio" style={{padding:"11px 16px",borderRadius:10,background:"#3b4d70",color:"#fff",fontWeight:800,textDecoration:"none"}}>🎙️ AI Voice Generator</a></nav><section className="director-bar" id="ai-video-studio">
+      <section className="director-bar" id="ai-video-studio">
         <div className="director-actions">
-          <button type="button" onClick={openVoiceSettings} style={{ padding: "10px 13px", borderRadius: 9, background: "#3b4d70", color: "#fff", fontWeight: 800, fontSize: 13 }}>🎙️ AI हिंदी आवाज़ सेट करें</button>
-          <a href="/3d-video.html" style={{ display: "inline-block", padding: "10px 13px", borderRadius: 9, background: "#176b58", color: "#fff", fontWeight: 800, fontSize: 13, textDecoration: "none" }}>🎬 3D MP4 टेस्ट (30 सेकंड)</a><a href="/3d-test.html" style={{ display:"inline-block", padding:"10px 13px", borderRadius:9, background:"#253b5b", color:"#fff", fontWeight:800, fontSize:13, textDecoration:"none" }}>🎭 3D कार्टून टेस्ट</a>
+          
+          
           <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "🎬 मेरी आज की 3D वीडियो तैयार करो"}</button>
         </div>
         <details style={{ marginTop: 12 }}>
@@ -322,31 +322,10 @@ function App() {
         </details>
         <p className="editor-status">{status}</p>
         {storyInfo && <p className="editor-note">किरदार: {storyInfo.characterBible || "AI द्वारा तय"}</p>}
-        <p className="editor-note">मुख्य बटन अब मुफ्त AI इंजन से वास्तविक AI वीडियो क्लिप बनाने की कोशिश करता है और MP4 को Library में सेव करता है। मुफ्त साझा GPU की उपलब्धता निश्चित नहीं है; अभी इंजन केवल लगभग 3 सेकंड की क्लिप देता है, पूरी लंबी कहानी नहीं।</p>
+        <p className="editor-note">एक ही मुख्य बटन से कहानी, AI वीडियो और हिंदी आवाज़ की प्रक्रिया चलाने का लक्ष्य है। अभी उपलब्ध वीडियो इंजन लगभग 3 सेकंड की क्लिप तक सीमित है; 10 मिनट का वास्तविक AI वीडियो अभी सत्यापित नहीं है।</p>
       </section>
     </>}
 
-    <section id="ai-voice-studio" style={{ maxWidth: 900, margin: "18px auto", padding: 18, border: "1px solid #52627a", borderRadius: 14, background: "#111827" }}>
-      <h3>🎙️ AI ऑडियो स्टूडियो — Kokoro Hindi Voice</h3>
-      <p style={{ color: "#cbd5e1", lineHeight: 1.6 }}>केवल AI बोलती हुई आवाज़ बनाएँ। यह बैकग्राउंड म्यूज़िक या गाना नहीं बनाता।</p>
-      <label htmlFor="ai-voice-text">हिंदी कहानी / डायलॉग</label>
-      <textarea id="ai-voice-text" value={voiceText} onChange={event => setVoiceText(event.target.value)} maxLength={5000} placeholder="यहाँ हिंदी कहानी या किरदार का संवाद लिखें…" style={{ width: "100%", minHeight: 120, marginTop: 8, padding: 12, borderRadius: 10, boxSizing: "border-box" }} />
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
-        <label htmlFor="ai-voice-choice">आवाज़</label>
-        <select id="ai-voice-choice" value={voiceId} onChange={event => setVoiceId(event.target.value)} style={{ padding: 10, borderRadius: 8 }}>
-          <option value="hm_omega">पुरुष — गहरी आवाज़</option>
-          <option value="hm_psi">पुरुष — शांत आवाज़</option>
-          <option value="hf_alpha">महिला — साफ़ आवाज़</option>
-          <option value="hf_beta">महिला — नरम आवाज़</option>
-        </select>
-        <button type="button" onClick={generateAiVoice} disabled={audioBusy}>{audioBusy ? "आवाज़ बन रही है…" : "🎧 AI आवाज़ बनाएं"}</button>
-      </div>
-      {audioUrl && <div style={{ marginTop: 14 }}>
-        <audio controls src={audioUrl} style={{ width: "100%" }} />
-        <a href={audioUrl} download="international-hindi-ai-voice.mp3" style={{ display: "inline-block", marginTop: 10, padding: "10px 14px", borderRadius: 9, background: "#176b58", color: "#fff", textDecoration: "none", fontWeight: 800 }}>⬇️ MP3 डाउनलोड करें</a>
-      </div>}
-      <small style={{ display: "block", color: "#aebbd0", marginTop: 10 }}>यह सार्वजनिक मुफ़्त सेवा है; उसकी उपलब्धता और उपयोग-सीमा बदल सकती है। इस सुविधा के लिए API key नहीं लगाई गई है।</small>
-    </section>
     {show3d && <section style={{ maxWidth: 900, margin: "18px auto", padding: 12, border: "1px solid #16a085", borderRadius: 14, background: "#111827" }}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 6px"}}><strong>🎭 3D वीडियो निर्माण</strong><button onClick={() => setShow3d(false)}>बंद करें</button></div><iframe title="3D MP4 निर्माता" src={`/3d-video.html?embedded=1&idea=${encodeURIComponent(idea || "मोहन और शरारती बकरी")}`} style={{width:"100%",height:680,border:0,borderRadius:10,background:"#0b1020"}} allow="autoplay" /></section>}
     <section style={{ maxWidth: 900, margin: "18px auto", padding: 18, border: "1px solid #46536a", borderRadius: 14, background: "#111827" }}>
       <h3>📁 मेरे सेव किए वीडियो ({savedVideos.length})</h3>
