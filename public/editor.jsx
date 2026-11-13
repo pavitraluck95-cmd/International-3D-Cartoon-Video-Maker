@@ -161,7 +161,7 @@ function App() {
   const [status, setStatus] = useState("एक क्लिक: 3D किरदार + हिंदी आवाज़ → MP4 → ऐप की Library।");
   const [storyInfo, setStoryInfo] = useState(null);
   const [savedVideos, setSavedVideos] = useState([]);
-  const [show3d, setShow3d] = useState(false);
+  const [show3d, setShow3d] = useState(false);\n  const [voiceText, setVoiceText] = useState("");\n  const [voiceId, setVoiceId] = useState("hm_omega");\n  const [audioBusy, setAudioBusy] = useState(false);\n  const [audioUrl, setAudioUrl] = useState("");
 
   useEffect(() => {
     const receive3d = async (event) => {
@@ -197,6 +197,38 @@ function App() {
 
   async function refreshSavedVideos() {
     setSavedVideos(await readVideoLibrary());
+  }
+
+
+  async function generateAiVoice() {
+    if (audioBusy) return;
+    if (!voiceText.trim()) {
+      setStatus("पहले AI आवाज़ के लिए हिंदी संवाद लिखें।");
+      return;
+    }
+    setAudioBusy(true);
+    setStatus("Kokoro AI हिंदी आवाज़ तैयार कर रहा है…");
+    try {
+      const response = await fetch(window.location.origin + "/api/ai-audio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: voiceText.trim(), voice: voiceId, speed: 1, lang: "hi" })
+      });
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail.error || "AI आवाज़ नहीं बन पाई।");
+      }
+      const blob = await response.blob();
+      if (!blob.size || !blob.type.includes("audio")) throw new Error("AI सेवा से वैध ऑडियो नहीं मिला।");
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      const url = URL.createObjectURL(blob);
+      setAudioUrl(url);
+      setStatus("🎙️ AI हिंदी आवाज़ तैयार है। सुनें या MP3 डाउनलोड करें।");
+    } catch (error) {
+      setStatus("AI आवाज़ नहीं बन पाई: " + (error.message || "सेवा अस्थायी रूप से व्यस्त है।"));
+    } finally {
+      setAudioBusy(false);
+    }
   }
 
   async function sendToGallery(item) {
@@ -289,6 +321,28 @@ function App() {
         <p className="editor-note">मुख्य बटन अब मुफ्त AI इंजन से वास्तविक AI वीडियो क्लिप बनाने की कोशिश करता है और MP4 को Library में सेव करता है। मुफ्त साझा GPU की उपलब्धता निश्चित नहीं है; अभी इंजन केवल लगभग 3 सेकंड की क्लिप देता है, पूरी लंबी कहानी नहीं।</p>
       </section>
     </>}
+
+    <section style={{ maxWidth: 900, margin: "18px auto", padding: 18, border: "1px solid #52627a", borderRadius: 14, background: "#111827" }}>
+      <h3>🎙️ AI ऑडियो स्टूडियो — Kokoro Hindi Voice</h3>
+      <p style={{ color: "#cbd5e1", lineHeight: 1.6 }}>केवल AI बोलती हुई आवाज़ बनाएँ। यह बैकग्राउंड म्यूज़िक या गाना नहीं बनाता।</p>
+      <label htmlFor="ai-voice-text">हिंदी कहानी / डायलॉग</label>
+      <textarea id="ai-voice-text" value={voiceText} onChange={event => setVoiceText(event.target.value)} maxLength={5000} placeholder="यहाँ हिंदी कहानी या किरदार का संवाद लिखें…" style={{ width: "100%", minHeight: 120, marginTop: 8, padding: 12, borderRadius: 10, boxSizing: "border-box" }} />
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
+        <label htmlFor="ai-voice-choice">आवाज़</label>
+        <select id="ai-voice-choice" value={voiceId} onChange={event => setVoiceId(event.target.value)} style={{ padding: 10, borderRadius: 8 }}>
+          <option value="hm_omega">पुरुष — गहरी आवाज़</option>
+          <option value="hm_psi">पुरुष — शांत आवाज़</option>
+          <option value="hf_alpha">महिला — साफ़ आवाज़</option>
+          <option value="hf_beta">महिला — नरम आवाज़</option>
+        </select>
+        <button type="button" onClick={generateAiVoice} disabled={audioBusy}>{audioBusy ? "आवाज़ बन रही है…" : "🎧 AI आवाज़ बनाएं"}</button>
+      </div>
+      {audioUrl && <div style={{ marginTop: 14 }}>
+        <audio controls src={audioUrl} style={{ width: "100%" }} />
+        <a href={audioUrl} download="international-hindi-ai-voice.mp3" style={{ display: "inline-block", marginTop: 10, padding: "10px 14px", borderRadius: 9, background: "#176b58", color: "#fff", textDecoration: "none", fontWeight: 800 }}>⬇️ MP3 डाउनलोड करें</a>
+      </div>}
+      <small style={{ display: "block", color: "#aebbd0", marginTop: 10 }}>यह सार्वजनिक मुफ़्त सेवा है; उसकी उपलब्धता और उपयोग-सीमा बदल सकती है। इस सुविधा के लिए API key नहीं लगाई गई है।</small>
+    </section>
     {show3d && <section style={{ maxWidth: 900, margin: "18px auto", padding: 12, border: "1px solid #16a085", borderRadius: 14, background: "#111827" }}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 6px"}}><strong>🎭 3D वीडियो निर्माण</strong><button onClick={() => setShow3d(false)}>बंद करें</button></div><iframe title="3D MP4 निर्माता" src={`/3d-video.html?embedded=1&idea=${encodeURIComponent(idea || "मोहन और शरारती बकरी")}`} style={{width:"100%",height:680,border:0,borderRadius:10,background:"#0b1020"}} allow="autoplay" /></section>}
     <section style={{ maxWidth: 900, margin: "18px auto", padding: 18, border: "1px solid #46536a", borderRadius: 14, background: "#111827" }}>
       <h3>📁 मेरे सेव किए वीडियो ({savedVideos.length})</h3>
