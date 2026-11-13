@@ -309,7 +309,7 @@ function App() {
         <a href="/" className="back-link">← मुख्य ऐप</a>
         <div><strong>🎭 3D कॉमेडी कार्टून वीडियो मेकर</strong><small>चलते 3D किरदार + हिंदी आवाज़ + MP4</small></div>
       </header>
-      <section className="director-bar">
+      <nav style={{display:"flex",gap:10,flexWrap:"wrap",padding:12,maxWidth:900,margin:"12px auto"}}><a href="#ai-video-studio" style={{padding:"11px 16px",borderRadius:10,background:"#176b58",color:"#fff",fontWeight:800,textDecoration:"none"}}>🎬 AI वीडियो जनरेटर</a><a href="#ai-voice-studio" style={{padding:"11px 16px",borderRadius:10,background:"#3b4d70",color:"#fff",fontWeight:800,textDecoration:"none"}}>🎙️ AI Voice Generator</a></nav><section className="director-bar" id="ai-video-studio">
         <div className="director-actions">
           <button type="button" onClick={openVoiceSettings} style={{ padding: "10px 13px", borderRadius: 9, background: "#3b4d70", color: "#fff", fontWeight: 800, fontSize: 13 }}>🎙️ AI हिंदी आवाज़ सेट करें</button>
           <a href="/3d-video.html" style={{ display: "inline-block", padding: "10px 13px", borderRadius: 9, background: "#176b58", color: "#fff", fontWeight: 800, fontSize: 13, textDecoration: "none" }}>🎬 3D MP4 टेस्ट (30 सेकंड)</a><a href="/3d-test.html" style={{ display:"inline-block", padding:"10px 13px", borderRadius:9, background:"#253b5b", color:"#fff", fontWeight:800, fontSize:13, textDecoration:"none" }}>🎭 3D कार्टून टेस्ट</a>
@@ -326,7 +326,7 @@ function App() {
       </section>
     </>}
 
-    <section style={{ maxWidth: 900, margin: "18px auto", padding: 18, border: "1px solid #52627a", borderRadius: 14, background: "#111827" }}>
+    <section id="ai-voice-studio" style={{ maxWidth: 900, margin: "18px auto", padding: 18, border: "1px solid #52627a", borderRadius: 14, background: "#111827" }}>
       <h3>🎙️ AI ऑडियो स्टूडियो — Kokoro Hindi Voice</h3>
       <p style={{ color: "#cbd5e1", lineHeight: 1.6 }}>केवल AI बोलती हुई आवाज़ बनाएँ। यह बैकग्राउंड म्यूज़िक या गाना नहीं बनाता।</p>
       <label htmlFor="ai-voice-text">हिंदी कहानी / डायलॉग</label>
