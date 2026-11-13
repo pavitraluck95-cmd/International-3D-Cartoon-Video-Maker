@@ -161,7 +161,11 @@ function App() {
   const [status, setStatus] = useState("एक क्लिक: 3D किरदार + हिंदी आवाज़ → MP4 → ऐप की Library।");
   const [storyInfo, setStoryInfo] = useState(null);
   const [savedVideos, setSavedVideos] = useState([]);
-  const [show3d, setShow3d] = useState(false);\n  const [voiceText, setVoiceText] = useState("");\n  const [voiceId, setVoiceId] = useState("hm_omega");\n  const [audioBusy, setAudioBusy] = useState(false);\n  const [audioUrl, setAudioUrl] = useState("");
+  const [show3d, setShow3d] = useState(false);
+  const [voiceText, setVoiceText] = useState("");
+  const [voiceId, setVoiceId] = useState("hm_omega");
+  const [audioBusy, setAudioBusy] = useState(false);
+  const [audioUrl, setAudioUrl] = useState("");
 
   useEffect(() => {
     const receive3d = async (event) => {
