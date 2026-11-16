@@ -16,7 +16,8 @@ export default defineConfig({
         main: resolve(publicRoot, "index.html"),
         editor: resolve(publicRoot, "editor.html"),
         threeTest: resolve(publicRoot, "3d-test.html"),
-        threeVideo: resolve(publicRoot, "3d-video.html")
+        threeVideo: resolve(publicRoot, "3d-video.html"),
+        workflow: resolve(publicRoot, "workflow.html")
       }
     }
   }
