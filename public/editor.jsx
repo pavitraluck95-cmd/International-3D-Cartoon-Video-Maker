@@ -255,11 +255,13 @@ function App() {
     setShow3d(false);
     setStatus("मुफ़्त AI इंजन से असली 3D वीडियो क्लिप बन रही है… GPU की कतार में समय लग सकता है।");
     try {
+      // Keep the prompt below the free engine's 1,800-character limit.
+      const safeIdea = (idea || "").trim().slice(0, 900) || "दो दोस्तों के बीच मजेदार गलतफहमी और हँसी वाला छोटा दृश्य";
       const prompt = [
-        "Create a polished high-quality cinematic 3D animated family comedy scene, vertical 9:16.",
-        "Two original fictional adult Indian village friends, expressive faces, detailed stylized 3D character models, natural body movement, clear gestures, expressive acting, believable eye and mouth movement, colorful detailed village street, cinematic lighting, smooth camera motion.",
-        "Hindi comedy scene: " + (idea.trim() || "दो दोस्तों के बीच मजेदार गलतफहमी और हँसी वाला छोटा दृश्य"),
-        "No 2D drawings, no still slideshow, no text, no subtitles, no logos, no celebrity likeness, original fictional characters only."
+        "Cinematic 3D animated family comedy, vertical 9:16.",
+        "Two original fictional Indian village friends, expressive faces, detailed 3D models, natural gestures and movement, colorful village street, cinematic lighting, smooth camera.",
+        "Hindi comedy scene: " + safeIdea,
+        "No 2D, slideshow, text, subtitles, logos, or celebrity likeness."
       ].join(" ");
       const generated = await fetch(window.location.origin + "/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
