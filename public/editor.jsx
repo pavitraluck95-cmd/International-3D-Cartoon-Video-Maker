@@ -257,7 +257,7 @@ function App() {
     try {
       // Generate four sequential 2-second AI scenes and join them into one ~8-second MP4.
       const safeIdea = (idea || "").trim().slice(0, 700) || "दो दोस्तों के बीच मजेदार गलतफहमी और हँसी वाला छोटा दृश्य";
-      const characterLock = "Cinematic 3D animated family comedy, vertical portrait 9:16. The two main original characters in EVERY scene and EVERY video are Bagadbillaa, a large expressive grey cat with white muzzle, chest and paws, and Mooshak, a tiny clever brown mouse with tan muzzle and belly, large round ears and a long thin tail. Keep their names, identities, colors, facial features, body proportions and relative scale exactly consistent in every clip. Both Bagadbillaa (cat) and Mooshak (mouse) must be clearly visible together in every scene, speaking their own Hindi dialogue with expressive mouth movement, playful hero-style delivery, funny reactions and family-friendly slapstick comedy. Detailed high-quality 3D animated models, natural motion, cinematic lighting. No humans, no Tom and Jerry names, no 2D, slideshow, text, subtitles or logos.";
+      const characterLock = "Cinematic 3D animated family comedy, vertical portrait 9:16. The two main original characters in EVERY scene and EVERY video are Bagadbillaa, a large expressive grey cat with white muzzle, chest and paws, and Mooshak, a tiny clever brown mouse with tan muzzle and belly, large round ears and a long thin tail. Keep their names, identities, colors, facial features, body proportions and relative scale exactly consistent in every clip. Both Bagadbillaa (cat) and Mooshak (mouse) must be clearly visible together in every scene, acting out the story with expressive faces, playful hero-style reactions and family-friendly slapstick comedy. Hindi dialogue will be added as a separate voiceover during editing; do not generate text, subtitles or logos. Detailed high-quality 3D animated models, natural motion, cinematic lighting. No humans, no Tom and Jerry names, no 2D or slideshow.";
       const beats = [
         "SCENE 1 — OPENING: Show Bagadbillaa the cat and Mooshak the mouse together. Establish the setting and begin this story situation: " + safeIdea + ". Start their funny argument or challenge.",
         "SCENE 2 — BUILD-UP: Continue the same story with identical character designs. Both characters speak in Hindi with hero-style comic dialogue. Show the first funny trick and reaction: " + safeIdea + ".",
@@ -268,11 +268,11 @@ function App() {
       const videoUrls = [];
       const dialogueStory = {
         scenes: [
-          { dialogue: "बागड़बिल्ला: अरे मूषक, आज इस कहानी में मैं हीरो बनकर दिखाऊँगा!" },
-          { dialogue: "मूषक: पहले काम तो कर लो, सिर्फ डींगें मारने से कोई हीरो नहीं बनता!" },
-          { dialogue: "बागड़बिल्ला: अच्छा! अब देखना मेरी चालाकी।" },
-          { dialogue: "मूषक: अरे वाह, तुम्हारी चालाकी तो उलटी पड़ गई!" },
-          { dialogue: "बागड़बिल्ला: ठीक है, आज जीत तुम्हारी… लेकिन अगली बार मेरी बारी!" }
+          { dialogue: "बागड़बिल्ला: मूषक, आज हमारी कहानी है " + safeIdea + "। चलो, मैं हीरो बनकर दिखाता हूँ!" },
+          { dialogue: "मूषक: रुक जाओ बागड़बिल्ले! पहले सोचो, फिर कोई चाल चलना।" },
+          { dialogue: "बागड़बिल्ला: अरे, मेरी ज़बरदस्त योजना तैयार है! अब देखना कमाल।" },
+          { dialogue: "मूषक: हा हा! तुम्हारी योजना तो उलटी पड़ गई। अब मेरी बारी!" },
+          { dialogue: "बागड़बिल्ला: मान गया मूषक, आज तुम जीते। लेकिन अगली कहानी में फिर मुकाबला होगा!" }
         ]
       };
       setStatus("फोन की हिंदी आवाज़ तैयार हो रही है…");
@@ -288,7 +288,7 @@ function App() {
         if (!generated.ok || !data.videoUrl) throw new Error("दृश्य " + (i + 1) + ": " + (data.error || "AI इंजन वीडियो नहीं बना पाया।"));
         videoUrls.push(data.videoUrl);
       }
-      setStatus("पाँचों AI दृश्य बन गए। अब लगभग 35 सेकंड की 9:16 Shorts MP4 जोड़ी जा रही है…");
+      setStatus("पाँचों AI दृश्य बन गए। अब लगभग 30 सेकंड की 9:16 Shorts MP4 जोड़ी जा रही है…");
       const joined = await fetch(window.location.origin + "/api/stitch-ai-videos", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoUrls, narration })
@@ -300,9 +300,9 @@ function App() {
       const blob = await joined.blob();
       if (blob.size < 20000 || !blob.type.includes("video")) throw new Error("जुड़ी हुई AI वीडियो वैध MP4 नहीं है।");
       const filename = "international-ai-3d-story-" + Date.now() + ".mp4";
-      await saveVideoToLibrary(blob, filename, 35);
+      await saveVideoToLibrary(blob, filename, 30);
       await refreshSavedVideos();
-      setStatus("🎉 पाँच AI दृश्यों को जोड़कर लगभग 35 सेकंड की 9:16 Shorts MP4 Library में सेव हो गई है।");
+      setStatus("🎉 पाँच AI दृश्यों को जोड़कर लगभग 30 सेकंड की 9:16 Shorts MP4 Library में सेव हो गई है।");
     } catch (error) {
       setStatus("AI वीडियो नहीं बन पाई: " + (error.message || "मुफ़्त साझा GPU व्यस्त हो सकता है।"));
     } finally {
