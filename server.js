@@ -172,6 +172,57 @@ app.post("/api/download-ai-video", async (req, res) => {
   }
 });
 
+// Join a small batch of genuine AI clips into one MP4. Only Hugging Face Space URLs are accepted.
+app.post("/api/stitch-ai-videos", async (req, res) => {
+  const urls = req.body && req.body.videoUrls;
+  if (!Array.isArray(urls) || urls.length < 2 || urls.length > 5) {
+    return res.status(400).json({ error: "एक साथ जोड़ने के लिए 2 से 5 AI क्लिप जरूरी हैं।" });
+  }
+  if (!ffmpegPath) return res.status(503).json({ error: "इस सर्वर पर MP4 encoder उपलब्ध नहीं है।" });
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "ai-clip-join-"));
+  try {
+    const inputs = [];
+    for (let i = 0; i < urls.length; i++) {
+      let parsed;
+      try { parsed = new URL(urls[i]); } catch { throw new Error("क्लिप " + (i + 1) + " का लिंक सही नहीं है।"); }
+      if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".hf.space")) {
+        throw new Error("सुरक्षा कारणों से क्लिप " + (i + 1) + " का स्रोत स्वीकार नहीं है।");
+      }
+      const response = await fetch(parsed.href, { signal: AbortSignal.timeout(90000) });
+      if (!response.ok) throw new Error("AI क्लिप " + (i + 1) + " डाउनलोड नहीं हो पाई।");
+      const type = response.headers.get("content-type") || "";
+      if (!type.includes("video") && !type.includes("octet-stream")) {
+        throw new Error("AI क्लिप " + (i + 1) + " वैध वीडियो नहीं है।");
+      }
+      const bytes = Buffer.from(await response.arrayBuffer());
+      if (!bytes.length || bytes.length > 80 * 1024 * 1024) throw new Error("AI क्लिप " + (i + 1) + " खाली या बहुत बड़ी है।");
+      const file = path.join(dir, "clip-" + i + ".mp4");
+      await fs.writeFile(file, bytes);
+      inputs.push(file);
+    }
+    const concatFile = path.join(dir, "clips.txt");
+    const entries = inputs.map(file => "file '" + file.replace(/'/g, "'\\''") + "'");
+    await fs.writeFile(concatFile, entries.join("\n") + "\n");
+    const output = path.join(dir, "joined.mp4");
+    await runFfmpeg([
+      "-y", "-f", "concat", "-safe", "0", "-i", concatFile,
+      "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
+      "-pix_fmt", "yuv420p", "-movflags", "+faststart", output
+    ]);
+    const result = await fs.readFile(output);
+    if (!result.length) throw new Error("जुड़ी हुई MP4 फ़ाइल खाली है।");
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Content-Disposition", 'attachment; filename="ai-cartoon-story.mp4"');
+    res.setHeader("Cache-Control", "no-store");
+    return res.send(result);
+  } catch (error) {
+    console.error("AI clip stitching failed:", error?.message);
+    return res.status(502).json({ error: error?.message || "AI क्लिप को एक MP4 में नहीं जोड़ा जा सका।" });
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
 // Image-to-video through the public Wan2.2 ZeroGPU Space.
 // Images are sent only for this generation request; they are not stored by this app.
 app.post("/api/animate-image", async (req, res) => {
