@@ -257,12 +257,12 @@ function App() {
     try {
       // Generate four sequential 2-second AI scenes and join them into one ~8-second MP4.
       const safeIdea = (idea || "").trim().slice(0, 700) || "दो दोस्तों के बीच मजेदार गलतफहमी और हँसी वाला छोटा दृश्य";
-      const characterLock = "Cinematic 3D animated family comedy, vertical 9:16. Keep exactly the same two original fictional Indian village friends in every clip: Mohan, 10-year-old boy wearing a mustard-yellow shirt and blue shorts, short black hair; Chintu, 10-year-old boy wearing a green shirt and brown shorts, wavy black hair. Same faces, clothes, body proportions and colorful Indian village street, detailed 3D models, expressive faces, natural motion, cinematic lighting. No 2D, slideshow, text, subtitles, logos, or celebrity likeness.";
+      const characterLock = "Cinematic 3D animated family comedy, vertical 9:16. The two main characters in EVERY scene and EVERY video must always be Tom the cat and Jerry the mouse. Tom is a gray anthropomorphic house cat with a white muzzle, white chest and paws, and expressive green eyes. Jerry is a very small brown mouse with a tan muzzle and belly, large round ears, and a long thin tail. Keep their identities, colors, facial features, body proportions and scale consistent in every clip. Both Tom (cat) and Jerry (mouse) must be clearly visible together in every scene, interacting through playful family-friendly comedy. Detailed 3D animated models, expressive faces, natural motion, cinematic lighting. No human replacement characters, no 2D, slideshow, text, subtitles or logos.";
       const beats = [
-        "SCENE 1 — OPENING: Establish the village and both friends. Begin this story situation: " + safeIdea + ". Show the problem starting clearly.",
-        "SCENE 2 — BUILD-UP: Continue the same story with the same two friends, same faces and clothes. Show the first important action and reaction: " + safeIdea + ".",
-        "SCENE 3 — CLIMAX: Continue naturally from the previous scene. Keep both characters identical and show the main event of this story: " + safeIdea + ".",
-        "SCENE 4 — ENDING: Continue the same story and characters. Show a clear satisfying resolution, happy reactions and a final cinematic shot. Story: " + safeIdea + "."
+        "SCENE 1 — OPENING: Show Tom the cat and Jerry the mouse together. Establish the setting and begin this story situation: " + safeIdea + ". Show the problem starting clearly.",
+        "SCENE 2 — BUILD-UP: Show both Tom the cat and Jerry the mouse together, continuing the same story with identical designs. Show the first important action and reaction: " + safeIdea + ".",
+        "SCENE 3 — CLIMAX: Continue naturally from the previous scene. Keep Tom the cat and Jerry the mouse together and visually consistent; show the main event: " + safeIdea + ".",
+        "SCENE 4 — ENDING: Keep Tom the cat and Jerry the mouse together and visually consistent. Show a clear satisfying resolution, playful reactions and a final cinematic shot. Story: " + safeIdea + "."
       ];
       const videoUrls = [];
       for (let i = 0; i < beats.length; i++) {
