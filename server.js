@@ -42,7 +42,7 @@ app.post("/api/generate", async (req, res) => {
       body: JSON.stringify({ data: [
         prompt,
         "worst quality, inconsistent motion, blurry, jittery, distorted, watermark",
-        null, null, 512, 704, "text-to-video", 2, 9, 42, true, 3, false
+        null, null, 512, 704, "text-to-video", 8.5, 9, 42, true, 3, false
       ] }),
       signal: AbortSignal.timeout(45000)
     });
@@ -135,7 +135,7 @@ app.post("/api/generate", async (req, res) => {
       return res.status(502).json({ error: "AI इंजन ने जवाब दिया, लेकिन MP4 फ़ाइल का लिंक नहीं मिला।" });
     }
     console.log("HF video generated successfully:", videoUrl.slice(0, 180));
-    return res.json({ videoUrl, durationSeconds: 2, message: "वीडियो तैयार है।" });
+    return res.json({ videoUrl, durationSeconds: 8.5, message: "8.5 सेकंड की AI वीडियो तैयार है।" });
   } catch (error) {
     console.error("Video generation request failed:", error?.name, error?.message);
     const message = error?.name === "TimeoutError" || error?.name === "AbortError"
