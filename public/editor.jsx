@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 const VIDEO_DB_NAME = "international-2d-video-library";
+const API_BASE = "https://international-3d-cartoon-video-maker.onrender.com";
 
 function openVideoLibrary() {
   return new Promise((resolve, reject) => {
@@ -213,7 +214,7 @@ function App() {
     setAudioBusy(true);
     setStatus("Kokoro AI हिंदी आवाज़ तैयार कर रहा है…");
     try {
-      const response = await fetch(window.location.origin + "/api/ai-audio", {
+      const response = await fetch(API_BASE + "/api/ai-audio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input: voiceText.trim(), voice: voiceId, speed: 1, lang: "hi" })
@@ -280,7 +281,7 @@ function App() {
       if (!narration) throw new Error("हिंदी आवाज़ के लिए Android APK की Text-to-Speech सुविधा उपलब्ध नहीं है।");
       for (let i = 0; i < beats.length; i++) {
         setStatus("AI कहानी का दृश्य " + (i + 1) + "/5 बन रहा है… हर दृश्य लगभग 7 सेकंड का होगा।");
-        const generated = await fetch(window.location.origin + "/api/generate", {
+        const generated = await fetch(API_BASE + "/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt: characterLock + " " + beats[i] })
         });
@@ -289,7 +290,7 @@ function App() {
         videoUrls.push(data.videoUrl);
       }
       setStatus("पाँचों AI दृश्य बन गए। अब लगभग 30 सेकंड की 9:16 Shorts MP4 जोड़ी जा रही है…");
-      const joined = await fetch(window.location.origin + "/api/stitch-ai-videos", {
+      const joined = await fetch(API_BASE + "/api/stitch-ai-videos", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoUrls, narration })
       });
