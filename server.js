@@ -36,69 +36,86 @@ app.post("/api/generate", async (req, res) => {
 
   const base = "https://lightricks-ltx-video-distilled.hf.space";
   try {
-    const submit = await fetch(base + "/gradio_api/call/text_to_video", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [
-        prompt,
-        "worst quality, inconsistent motion, blurry, jittery, distorted, watermark",
-        null, null, 800, 448, "text-to-video", 7, 9, 42, true, 3, false
-      ] }),
-      signal: AbortSignal.timeout(45000)
-    });
-    if (!submit.ok) {
-      const detail = (await submit.text()).slice(0, 240);
-      console.error("HF submit failed:", submit.status, detail);
-      return res.status(502).json({ error: submit.status === 503 || submit.status === 429
-        ? "मुफ़्त AI इंजन अभी व्यस्त है। कुछ देर बाद फिर कोशिश करें।"
-        : "AI इंजन ने अनुरोध स्वीकार नहीं किया (HTTP " + submit.status + ")।" });
-    }
-
-    const queued = await submit.json();
-    if (!queued.event_id) {
-      console.error("HF returned no event id:", JSON.stringify(queued).slice(0, 300));
-      return res.status(502).json({ error: "AI इंजन ने काम शुरू नहीं किया। कुछ देर बाद फिर कोशिश करें।" });
-    }
-
-    const result = await fetch(base + "/gradio_api/call/text_to_video/" + encodeURIComponent(queued.event_id), {
-      headers: { "Accept": "text/event-stream" },
-      signal: AbortSignal.timeout(8 * 60 * 1000)
-    });
-    if (!result.ok) {
-      const detail = (await result.text()).slice(0, 240);
-      console.error("HF result failed:", result.status, detail);
-      return res.status(502).json({ error: "AI इंजन से वीडियो परिणाम नहीं मिला (HTTP " + result.status + ")।" });
-    }
-
-    const raw = await result.text();
     let completedData = null;
     let engineError = "";
-    // Gradio sends Server-Sent Events. Accept complete/success events and
-    // tolerate JSON payloads split across multiple data: lines.
-    for (const block of raw.split(/\r?\n\r?\n/)) {
-      const event = block.match(/^event:\s*(\S+)/m)?.[1];
-      const data = block.split(/\r?\n/).filter(line => line.startsWith("data:"))
-        .map(line => line.slice(5).trim()).join("\n");
-      if (!data) continue;
-      if (event === "error") engineError = data;
-      if (event === "complete" || event === "success") {
-        try { completedData = JSON.parse(data); }
-        catch { completedData = data; }
+    let raw = "";
+    let result = null;
+
+    // Gradio/ZeroGPU can occasionally emit an empty "error: null" event while
+    // a shared GPU slot is being allocated. Retry that specific transient case once.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const submit = await fetch(base + "/gradio_api/call/text_to_video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: [
+          prompt,
+          "worst quality, inconsistent motion, blurry, jittery, distorted, watermark",
+          null, null, 800, 448, "text-to-video", 7, 9, 42, true, 3, false
+        ] }),
+        signal: AbortSignal.timeout(45000)
+      });
+      if (!submit.ok) {
+        const detail = (await submit.text()).slice(0, 500);
+        console.error("HF submit failed:", submit.status, detail);
+        return res.status(502).json({ error: submit.status === 503 || submit.status === 429
+          ? "मुफ़्त AI इंजन की GPU कतार अभी भरी है। थोड़ी देर बाद फिर कोशिश करें।"
+          : "AI इंजन ने अनुरोध स्वीकार नहीं किया (HTTP " + submit.status + ")।" });
       }
+
+      const queued = await submit.json();
+      if (!queued.event_id) {
+        console.error("HF returned no event id:", JSON.stringify(queued).slice(0, 800));
+        return res.status(502).json({ error: "AI इंजन ने काम शुरू नहीं किया। कृपया थोड़ी देर बाद फिर कोशिश करें।" });
+      }
+
+      result = await fetch(base + "/gradio_api/call/text_to_video/" + encodeURIComponent(queued.event_id), {
+        headers: { "Accept": "text/event-stream" },
+        signal: AbortSignal.timeout(8 * 60 * 1000)
+      });
+      if (!result.ok) {
+        const detail = (await result.text()).slice(0, 500);
+        console.error("HF result failed:", result.status, detail);
+        return res.status(502).json({ error: "AI इंजन से वीडियो परिणाम नहीं मिला (HTTP " + result.status + ")।" });
+      }
+
+      raw = await result.text();
+      completedData = null;
+      engineError = "";
+      for (const block of raw.split(/\\r?\\n\\r?\\n/)) {
+        const event = block.match(/^event:\\s*(\\S+)/m)?.[1];
+        const data = block.split(/\\r?\\n/).filter(line => line.startsWith("data:"))
+          .map(line => line.slice(5).trim()).join("\\n");
+        if (!data) continue;
+        if (event === "error") engineError = data;
+        if (event === "complete" || event === "success") {
+          try { completedData = JSON.parse(data); }
+          catch { completedData = data; }
+        }
+      }
+
+      if (/^null$/i.test(engineError) && attempt === 0) {
+        console.warn("HF returned an empty error event; retrying once after 5 seconds.");
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        continue;
+      }
+      break;
     }
 
     if (engineError) {
-      console.error("HF generation event error:", engineError.slice(0, 1200));
+      console.error("HF generation event error; raw SSE:", raw.slice(-3000));
       let detail = engineError;
       try { detail = JSON.stringify(JSON.parse(engineError)); } catch {}
+      const isEmptyError = /^null$/i.test(engineError);
       return res.status(502).json({
-        error: /queue|busy|capacity|gpu|zero.?gpu|rate.?limit|429|503/i.test(detail)
-          ? "मुफ़्त AI इंजन की GPU कतार भरी है। थोड़ी देर बाद फिर कोशिश करें।"
-          : "AI इंजन ने वीडियो बनाने से मना किया: " + detail.slice(0, 220)
+        error: isEmptyError
+          ? "मुफ़्त Hugging Face GPU ने दो कोशिशों के बाद भी वीडियो शुरू नहीं की। यह साझा GPU की अस्थायी समस्या है; थोड़ी देर बाद फिर कोशिश करें।"
+          : /queue|busy|capacity|gpu|zero.?gpu|rate.?limit|429|503/i.test(detail)
+            ? "मुफ़्त AI इंजन की GPU कतार भरी है। थोड़ी देर बाद फिर कोशिश करें।"
+            : "AI इंजन ने वीडियो बनाने से मना किया: " + detail.slice(0, 220)
       });
     }
     if (!completedData) {
-      console.error("HF no completion event; content-type:", result.headers.get("content-type"), "response tail:", raw.slice(-1400));
+      console.error("HF no completion event; content-type:", result?.headers.get("content-type"), "full response tail:", raw.slice(-3000));
       return res.status(502).json({ error: "AI इंजन ने पूरा परिणाम नहीं लौटाया। कृपया थोड़ी देर बाद फिर कोशिश करें।" });
     }
 
