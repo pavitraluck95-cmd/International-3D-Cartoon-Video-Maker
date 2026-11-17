@@ -81,10 +81,10 @@ app.post("/api/generate", async (req, res) => {
       raw = await result.text();
       completedData = null;
       engineError = "";
-      for (const block of raw.split(/\\r?\\n\\r?\\n/)) {
-        const event = block.match(/^event:\\s*(\\S+)/m)?.[1];
-        const data = block.split(/\\r?\\n/).filter(line => line.startsWith("data:"))
-          .map(line => line.slice(5).trim()).join("\\n");
+      for (const block of raw.split(/\r?\n\r?\n/)) {
+        const event = block.match(/^event:\s*(\S+)/m)?.[1];
+        const data = block.split(/\r?\n/).filter(line => line.startsWith("data:"))
+          .map(line => line.slice(5).trim()).join("\n");
         if (!data) continue;
         if (event === "error") engineError = data;
         if (event === "complete" || event === "success") {
