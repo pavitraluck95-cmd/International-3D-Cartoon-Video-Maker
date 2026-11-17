@@ -50,7 +50,7 @@ app.post("/api/generate", async (req, res) => {
         body: JSON.stringify({ data: [
           prompt,
           "worst quality, inconsistent motion, blurry, jittery, distorted, watermark",
-          null, null, 800, 448, "text-to-video", 7, 9, 42, true, 3, false
+          null, null, 448, 800, "text-to-video", 7, 9, 42, true, 3, false
         ] }),
         signal: AbortSignal.timeout(45000)
       });
@@ -221,10 +221,23 @@ app.post("/api/stitch-ai-videos", async (req, res) => {
     const entries = inputs.map(file => "file '" + file.replace(/'/g, "'\\''") + "'");
     await fs.writeFile(concatFile, entries.join("\n") + "\n");
     const output = path.join(dir, "joined.mp4");
+    const narration = typeof req.body?.narration === "string" ? req.body.narration : "";
+    const audioMatch = narration.match(/^data:audio\/(?:wav|x-wav);base64,([A-Za-z0-9+/=]+)$/);
+    if (!audioMatch) throw new Error("हिंदी आवाज़ नहीं मिली; बिना आवाज़ वाली MP4 नहीं बनाई जाएगी।");
+    const audio = Buffer.from(audioMatch[1], "base64");
+    if (audio.length < 44 || audio.length > 12 * 1024 * 1024 ||
+        audio.toString("ascii", 0, 4) !== "RIFF" || audio.toString("ascii", 8, 12) !== "WAVE") {
+      throw new Error("हिंदी आवाज़ की WAV फ़ाइल अधूरी या अमान्य है।");
+    }
+    const voiceFile = path.join(dir, "voice.wav");
+    await fs.writeFile(voiceFile, audio);
     await runFfmpeg([
-      "-y", "-f", "concat", "-safe", "0", "-i", concatFile,
-      "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
-      "-pix_fmt", "yuv420p", "-movflags", "+faststart", output
+      "-y", "-f", "concat", "-safe", "0", "-i", concatFile, "-i", voiceFile,
+      "-map", "0:v:0", "-map", "1:a:0",
+      "-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=24",
+      "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
+      "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-af", "apad",
+      "-shortest", "-movflags", "+faststart", output
     ]);
     const result = await fs.readFile(output);
     if (!result.length) throw new Error("जुड़ी हुई MP4 फ़ाइल खाली है।");
