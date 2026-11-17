@@ -257,16 +257,17 @@ function App() {
     try {
       // Generate four sequential 2-second AI scenes and join them into one ~8-second MP4.
       const safeIdea = (idea || "").trim().slice(0, 700) || "दो दोस्तों के बीच मजेदार गलतफहमी और हँसी वाला छोटा दृश्य";
-      const characterLock = "Cinematic 3D animated family comedy, vertical 9:16. The two main characters in EVERY scene and EVERY video must always be Tom the cat and Jerry the mouse. Tom is a gray anthropomorphic house cat with a white muzzle, white chest and paws, and expressive green eyes. Jerry is a very small brown mouse with a tan muzzle and belly, large round ears, and a long thin tail. Keep their identities, colors, facial features, body proportions and scale consistent in every clip. Both Tom (cat) and Jerry (mouse) must be clearly visible together in every scene, interacting through playful family-friendly comedy. Detailed 3D animated models, expressive faces, natural motion, cinematic lighting. No human replacement characters, no 2D, slideshow, text, subtitles or logos.";
+      const characterLock = "Cinematic 3D animated family comedy, vertical portrait 9:16. The two main original characters in EVERY scene and EVERY video are Bagadbillaa, a large expressive grey cat with white muzzle, chest and paws, and Mooshak, a tiny clever brown mouse with tan muzzle and belly, large round ears and a long thin tail. Keep their names, identities, colors, facial features, body proportions and relative scale exactly consistent in every clip. Both Bagadbillaa (cat) and Mooshak (mouse) must be clearly visible together in every scene, speaking their own Hindi dialogue with expressive mouth movement, playful hero-style delivery, funny reactions and family-friendly slapstick comedy. Detailed high-quality 3D animated models, natural motion, cinematic lighting. No humans, no Tom and Jerry names, no 2D, slideshow, text, subtitles or logos.";
       const beats = [
-        "SCENE 1 — OPENING: Show Tom the cat and Jerry the mouse together. Establish the setting and begin this story situation: " + safeIdea + ". Show the problem starting clearly.",
-        "SCENE 2 — BUILD-UP: Show both Tom the cat and Jerry the mouse together, continuing the same story with identical designs. Show the first important action and reaction: " + safeIdea + ".",
-        "SCENE 3 — CLIMAX: Continue naturally from the previous scene. Keep Tom the cat and Jerry the mouse together and visually consistent; show the main event: " + safeIdea + ".",
-        "SCENE 4 — ENDING: Keep Tom the cat and Jerry the mouse together and visually consistent. Show a clear satisfying resolution, playful reactions and a final cinematic shot. Story: " + safeIdea + "."
+        "SCENE 1 — OPENING: Show Bagadbillaa the cat and Mooshak the mouse together. Establish the setting and begin this story situation: " + safeIdea + ". Start their funny argument or challenge.",
+        "SCENE 2 — BUILD-UP: Continue the same story with identical character designs. Both characters speak in Hindi with hero-style comic dialogue. Show the first funny trick and reaction: " + safeIdea + ".",
+        "SCENE 3 — TWIST: Continue naturally from the previous scene. Keep Bagadbillaa and Mooshak together and visually consistent; show a clever surprise, chase or harmless slapstick gag: " + safeIdea + ".",
+        "SCENE 4 — CLIMAX: Both characters remain on screen and speak their own short Hindi lines. Show the funniest action and a strong comic reaction: " + safeIdea + ".",
+        "SCENE 5 — ENDING: Keep Bagadbillaa the cat and Mooshak the mouse together and visually consistent. End with a clear funny punchline, hero-style final dialogue and playful reaction. Story: " + safeIdea + "."
       ];
       const videoUrls = [];
       for (let i = 0; i < beats.length; i++) {
-        setStatus("AI कहानी का दृश्य " + (i + 1) + "/4 बन रहा है… हर दृश्य लगभग 2 सेकंड का होगा।");
+        setStatus("AI कहानी का दृश्य " + (i + 1) + "/5 बन रहा है… हर दृश्य लगभग 7 सेकंड का होगा।");
         const generated = await fetch(window.location.origin + "/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt: characterLock + " " + beats[i] })
@@ -275,7 +276,7 @@ function App() {
         if (!generated.ok || !data.videoUrl) throw new Error("दृश्य " + (i + 1) + ": " + (data.error || "AI इंजन वीडियो नहीं बना पाया।"));
         videoUrls.push(data.videoUrl);
       }
-      setStatus("चारों AI दृश्य बन गए। अब लगभग 8 सेकंड की एक MP4 कहानी बनाई जा रही है…");
+      setStatus("पाँचों AI दृश्य बन गए। अब लगभग 35 सेकंड की 9:16 Shorts MP4 जोड़ी जा रही है…");
       const joined = await fetch(window.location.origin + "/api/stitch-ai-videos", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoUrls })
@@ -287,9 +288,9 @@ function App() {
       const blob = await joined.blob();
       if (blob.size < 20000 || !blob.type.includes("video")) throw new Error("जुड़ी हुई AI वीडियो वैध MP4 नहीं है।");
       const filename = "international-ai-3d-story-" + Date.now() + ".mp4";
-      await saveVideoToLibrary(blob, filename, 34);
+      await saveVideoToLibrary(blob, filename, 35);
       await refreshSavedVideos();
-      setStatus("🎉 चार असली AI 3D दृश्यों को जोड़कर लगभग 8 सेकंड की MP4 कहानी Library में सेव हो गई है।");
+      setStatus("🎉 पाँच AI दृश्यों को जोड़कर लगभग 35 सेकंड की 9:16 Shorts MP4 Library में सेव हो गई है।");
     } catch (error) {
       setStatus("AI वीडियो नहीं बन पाई: " + (error.message || "मुफ़्त साझा GPU व्यस्त हो सकता है।"));
     } finally {
