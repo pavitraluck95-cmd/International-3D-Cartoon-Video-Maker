@@ -255,17 +255,18 @@ function App() {
     setShow3d(false);
     setStatus("मुफ़्त AI इंजन से असली 3D वीडियो क्लिप बन रही है… GPU की कतार में समय लग सकता है।");
     try {
-      // Generate three short sequential clips with the same character description, then join them.
+      // Generate four sequential 8.5-second AI scenes and join them into one ~34-second MP4.
       const safeIdea = (idea || "").trim().slice(0, 700) || "दो दोस्तों के बीच मजेदार गलतफहमी और हँसी वाला छोटा दृश्य";
       const characterLock = "Cinematic 3D animated family comedy, vertical 9:16. Keep exactly the same two original fictional Indian village friends in every clip: Mohan, 10-year-old boy wearing a mustard-yellow shirt and blue shorts, short black hair; Chintu, 10-year-old boy wearing a green shirt and brown shorts, wavy black hair. Same faces, clothes, body proportions and colorful Indian village street, detailed 3D models, expressive faces, natural motion, cinematic lighting. No 2D, slideshow, text, subtitles, logos, or celebrity likeness.";
       const beats = [
-        "CLIP 1 — OPENING: Establish the village and both friends. Begin this story situation: " + safeIdea + ". Show the problem starting clearly.",
-        "CLIP 2 — MIDDLE: Continue the exact same moment with the same two friends, same faces and clothes. Develop the funny misunderstanding from this story: " + safeIdea + ".",
-        "CLIP 3 — ENDING: Continue seamlessly with the same two friends, same faces and clothes. Show a clear funny resolution and both friends reacting happily. Story: " + safeIdea + "."
+        "SCENE 1 — OPENING: Establish the village and both friends. Begin this story situation: " + safeIdea + ". Show the problem starting clearly.",
+        "SCENE 2 — BUILD-UP: Continue the same story with the same two friends, same faces and clothes. Show the first important action and reaction: " + safeIdea + ".",
+        "SCENE 3 — CLIMAX: Continue naturally from the previous scene. Keep both characters identical and show the main event of this story: " + safeIdea + ".",
+        "SCENE 4 — ENDING: Continue the same story and characters. Show a clear satisfying resolution, happy reactions and a final cinematic shot. Story: " + safeIdea + "."
       ];
       const videoUrls = [];
       for (let i = 0; i < beats.length; i++) {
-        setStatus("AI कहानी का दृश्य " + (i + 1) + "/3 बन रहा है… हर दृश्य में वही किरदार रखे जा रहे हैं।");
+        setStatus("AI कहानी का दृश्य " + (i + 1) + "/4 बन रहा है… हर दृश्य लगभग 8 सेकंड का होगा।");
         const generated = await fetch(window.location.origin + "/api/generate", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt: characterLock + " " + beats[i] })
@@ -274,7 +275,7 @@ function App() {
         if (!generated.ok || !data.videoUrl) throw new Error("दृश्य " + (i + 1) + ": " + (data.error || "AI इंजन वीडियो नहीं बना पाया।"));
         videoUrls.push(data.videoUrl);
       }
-      setStatus("तीनों AI दृश्य बन गए। अब उन्हें एक MP4 कहानी में जोड़ा जा रहा है…");
+      setStatus("चारों AI दृश्य बन गए। अब लगभग 34 सेकंड की एक MP4 कहानी बनाई जा रही है…");
       const joined = await fetch(window.location.origin + "/api/stitch-ai-videos", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoUrls })
@@ -286,9 +287,9 @@ function App() {
       const blob = await joined.blob();
       if (blob.size < 20000 || !blob.type.includes("video")) throw new Error("जुड़ी हुई AI वीडियो वैध MP4 नहीं है।");
       const filename = "international-ai-3d-story-" + Date.now() + ".mp4";
-      await saveVideoToLibrary(blob, filename, 9);
+      await saveVideoToLibrary(blob, filename, 34);
       await refreshSavedVideos();
-      setStatus("🎉 तीन असली AI 3D दृश्यों को जोड़कर एक छोटी MP4 कहानी Library में सेव हो गई है। अभी यह लगभग 6–9 सेकंड की टेस्ट कहानी है; 30 सेकंड/1–3 मिनट और पूरी लंबी फिल्म अभी उपलब्ध नहीं है।");
+      setStatus("🎉 चार असली AI 3D दृश्यों को जोड़कर लगभग 30–34 सेकंड की MP4 कहानी Library में सेव हो गई है।");
     } catch (error) {
       setStatus("AI वीडियो नहीं बन पाई: " + (error.message || "मुफ़्त साझा GPU व्यस्त हो सकता है।"));
     } finally {
