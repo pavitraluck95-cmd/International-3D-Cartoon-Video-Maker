@@ -237,7 +237,7 @@ app.post("/api/stitch-ai-videos", async (req, res) => {
       "-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=24",
       "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
       "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-af", "apad",
-      "-shortest", "-movflags", "+faststart", output
+      "-t", "30", "-shortest", "-movflags", "+faststart", output
     ]);
     const result = await fs.readFile(output);
     if (!result.length) throw new Error("जुड़ी हुई MP4 फ़ाइल खाली है।");
