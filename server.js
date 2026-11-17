@@ -73,63 +73,69 @@ app.post("/api/generate", async (req, res) => {
     const raw = await result.text();
     let completedData = null;
     let engineError = "";
-    // Parse SSE blocks; Gradio may return a video filepath rather than a public URL.
+    // Gradio sends Server-Sent Events. Accept complete/success events and
+    // tolerate JSON payloads split across multiple data: lines.
     for (const block of raw.split(/\r?\n\r?\n/)) {
       const event = block.match(/^event:\s*(\S+)/m)?.[1];
       const data = block.split(/\r?\n/).filter(line => line.startsWith("data:"))
         .map(line => line.slice(5).trim()).join("\n");
-      if (!event || !data) continue;
+      if (!data) continue;
       if (event === "error") engineError = data;
-      if (event === "complete") {
+      if (event === "complete" || event === "success") {
         try { completedData = JSON.parse(data); }
-        catch (e) { console.error("HF complete JSON parse failed:", data.slice(0, 300)); }
+        catch { completedData = data; }
       }
     }
 
     if (engineError) {
-      const errorBlock = raw.split(/\r?\n\r?\n/).find(block => /^event:\s*error/m.test(block)) || "";
-      console.error("HF generation event error; raw SSE block:", errorBlock.slice(0, 1800));
-      console.error("HF generation event error data:", engineError.slice(0, 500));
-      return res.status(502).json({ error: "मुफ़्त AI इंजन इस समय वीडियो नहीं बना पाया। यह साझा GPU की व्यस्तता या इंजन की अस्थायी समस्या हो सकती है।" });
+      console.error("HF generation event error:", engineError.slice(0, 1200));
+      let detail = engineError;
+      try { detail = JSON.stringify(JSON.parse(engineError)); } catch {}
+      return res.status(502).json({
+        error: /queue|busy|capacity|gpu|zero.?gpu|rate.?limit|429|503/i.test(detail)
+          ? "मुफ़्त AI इंजन की GPU कतार भरी है। थोड़ी देर बाद फिर कोशिश करें।"
+          : "AI इंजन ने वीडियो बनाने से मना किया: " + detail.slice(0, 220)
+      });
     }
     if (!completedData) {
-      console.error("HF no complete event; response:", raw.slice(-700));
-      return res.status(502).json({ error: "AI इंजन ने समय पर परिणाम नहीं दिया। कृपया दोबारा कोशिश करें।" });
+      console.error("HF no completion event; content-type:", result.headers.get("content-type"), "response tail:", raw.slice(-1400));
+      return res.status(502).json({ error: "AI इंजन ने पूरा परिणाम नहीं लौटाया। कृपया थोड़ी देर बाद फिर कोशिश करें।" });
     }
 
     const findVideo = (value) => {
       if (!value) return null;
+      if (typeof value === "string") {
+        if (/^https?:\/\//i.test(value)) return value;
+        if (/\.mp4(?:$|[?#])/i.test(value) || value.startsWith("/tmp/") || value.startsWith("tmp/")) {
+          return base + "/gradio_api/file=" + encodeURIComponent(value.startsWith("/") ? value : "/" + value);
+        }
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed !== value) return findVideo(parsed);
+        } catch {}
+        return null;
+      }
       if (Array.isArray(value)) {
         for (const item of value) { const found = findVideo(item); if (found) return found; }
       } else if (typeof value === "object") {
-        // Gradio file component commonly returns {path, url, ...}.
-        if (value.video && typeof value.video === "object") {
-          const found = findVideo(value.video); if (found) return found;
-        }
-        if (typeof value.url === "string" && value.url) {
-          return /^https?:\/\//.test(value.url) ? value.url : new URL(value.url, base).href;
-        }
-        if (typeof value.path === "string" && value.path) {
-          if (/^https?:\/\//.test(value.path)) return value.path;
-          const cleanPath = value.path.replace(/^\/+/, "");
-          return base + "/gradio_api/file=" + encodeURIComponent("/" + cleanPath);
-        }
-        for (const key of ["data", "value", "output", "files"]) {
+        for (const key of ["video", "data", "value", "output", "files"]) {
           const found = findVideo(value[key]); if (found) return found;
         }
-      } else if (typeof value === "string" && /^https?:\/\//.test(value)) {
-        return value;
+        if (typeof value.url === "string" && value.url) {
+          return /^https?:\/\//i.test(value.url) ? value.url : new URL(value.url, base).href;
+        }
+        if (typeof value.path === "string" && value.path) return findVideo(value.path);
       }
       return null;
     };
 
     const videoUrl = findVideo(completedData);
     if (!videoUrl) {
-      console.error("HF complete event had no recognized video file:", JSON.stringify(completedData).slice(0, 700));
-      return res.status(502).json({ error: "AI इंजन ने जवाब दिया, लेकिन वीडियो फ़ाइल नहीं मिली। इंजन का आउटपुट बदल गया हो सकता है।" });
+      console.error("HF completion payload has no video path:", JSON.stringify(completedData).slice(0, 1600));
+      return res.status(502).json({ error: "AI इंजन ने जवाब दिया, लेकिन MP4 फ़ाइल का लिंक नहीं मिला।" });
     }
-    console.log("HF video generated successfully.");
-    return res.json({ videoUrl, durationSeconds: 3, message: "वीडियो तैयार है।" });
+    console.log("HF video generated successfully:", videoUrl.slice(0, 180));
+    return res.json({ videoUrl, durationSeconds: 2, message: "वीडियो तैयार है।" });
   } catch (error) {
     console.error("Video generation request failed:", error?.name, error?.message);
     const message = error?.name === "TimeoutError" || error?.name === "AbortError"
