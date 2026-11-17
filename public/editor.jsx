@@ -266,6 +266,18 @@ function App() {
         "SCENE 5 — ENDING: Keep Bagadbillaa the cat and Mooshak the mouse together and visually consistent. End with a clear funny punchline, hero-style final dialogue and playful reaction. Story: " + safeIdea + "."
       ];
       const videoUrls = [];
+      const dialogueStory = {
+        scenes: [
+          { dialogue: "बागड़बिल्ला: अरे मूषक, आज इस कहानी में मैं हीरो बनकर दिखाऊँगा!" },
+          { dialogue: "मूषक: पहले काम तो कर लो, सिर्फ डींगें मारने से कोई हीरो नहीं बनता!" },
+          { dialogue: "बागड़बिल्ला: अच्छा! अब देखना मेरी चालाकी।" },
+          { dialogue: "मूषक: अरे वाह, तुम्हारी चालाकी तो उलटी पड़ गई!" },
+          { dialogue: "बागड़बिल्ला: ठीक है, आज जीत तुम्हारी… लेकिन अगली बार मेरी बारी!" }
+        ]
+      };
+      setStatus("फोन की हिंदी आवाज़ तैयार हो रही है…");
+      const narration = await makeHindiNarration(dialogueStory);
+      if (!narration) throw new Error("हिंदी आवाज़ के लिए Android APK की Text-to-Speech सुविधा उपलब्ध नहीं है।");
       for (let i = 0; i < beats.length; i++) {
         setStatus("AI कहानी का दृश्य " + (i + 1) + "/5 बन रहा है… हर दृश्य लगभग 7 सेकंड का होगा।");
         const generated = await fetch(window.location.origin + "/api/generate", {
@@ -279,7 +291,7 @@ function App() {
       setStatus("पाँचों AI दृश्य बन गए। अब लगभग 35 सेकंड की 9:16 Shorts MP4 जोड़ी जा रही है…");
       const joined = await fetch(window.location.origin + "/api/stitch-ai-videos", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoUrls })
+        body: JSON.stringify({ videoUrls, narration })
       });
       if (!joined.ok) {
         const detail = await joined.json().catch(() => ({}));
