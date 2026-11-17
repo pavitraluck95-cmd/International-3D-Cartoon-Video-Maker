@@ -255,35 +255,40 @@ function App() {
     setShow3d(false);
     setStatus("मुफ़्त AI इंजन से असली 3D वीडियो क्लिप बन रही है… GPU की कतार में समय लग सकता है।");
     try {
-      // Keep the prompt below the free engine's 1,800-character limit.
-      const safeIdea = (idea || "").trim().slice(0, 900) || "दो दोस्तों के बीच मजेदार गलतफहमी और हँसी वाला छोटा दृश्य";
-      const prompt = [
-        "Cinematic 3D animated family comedy, vertical 9:16.",
-        "Two original fictional Indian village friends, expressive faces, detailed 3D models, natural gestures and movement, colorful village street, cinematic lighting, smooth camera.",
-        "Hindi comedy scene: " + safeIdea,
-        "No 2D, slideshow, text, subtitles, logos, or celebrity likeness."
-      ].join(" ");
-      const generated = await fetch(window.location.origin + "/api/generate", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt })
-      });
-      const data = await generated.json().catch(() => ({}));
-      if (!generated.ok || !data.videoUrl) throw new Error(data.error || "AI इंजन वीडियो नहीं बना पाया।");
-      setStatus("AI क्लिप बन गई है। अब MP4 ऐप की Library में सेव हो रही है…");
-      const fileResponse = await fetch(window.location.origin + "/api/download-ai-video", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoUrl: data.videoUrl })
-      });
-      if (!fileResponse.ok) {
-        const detail = await fileResponse.json().catch(() => ({}));
-        throw new Error(detail.error || "AI वीडियो डाउनलोड नहीं हो पाई।");
+      // Generate three short sequential clips with the same character description, then join them.
+      const safeIdea = (idea || "").trim().slice(0, 700) || "दो दोस्तों के बीच मजेदार गलतफहमी और हँसी वाला छोटा दृश्य";
+      const characterLock = "Cinematic 3D animated family comedy, vertical 9:16. Keep exactly the same two original fictional Indian village friends in every clip: Mohan, 10-year-old boy wearing a mustard-yellow shirt and blue shorts, short black hair; Chintu, 10-year-old boy wearing a green shirt and brown shorts, wavy black hair. Same faces, clothes, body proportions and colorful Indian village street, detailed 3D models, expressive faces, natural motion, cinematic lighting. No 2D, slideshow, text, subtitles, logos, or celebrity likeness.";
+      const beats = [
+        "CLIP 1 — OPENING: Establish the village and both friends. Begin this story situation: " + safeIdea + ". Show the problem starting clearly.",
+        "CLIP 2 — MIDDLE: Continue the exact same moment with the same two friends, same faces and clothes. Develop the funny misunderstanding from this story: " + safeIdea + ".",
+        "CLIP 3 — ENDING: Continue seamlessly with the same two friends, same faces and clothes. Show a clear funny resolution and both friends reacting happily. Story: " + safeIdea + "."
+      ];
+      const videoUrls = [];
+      for (let i = 0; i < beats.length; i++) {
+        setStatus("AI कहानी का दृश्य " + (i + 1) + "/3 बन रहा है… हर दृश्य में वही किरदार रखे जा रहे हैं।");
+        const generated = await fetch(window.location.origin + "/api/generate", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: characterLock + " " + beats[i] })
+        });
+        const data = await generated.json().catch(() => ({}));
+        if (!generated.ok || !data.videoUrl) throw new Error("दृश्य " + (i + 1) + ": " + (data.error || "AI इंजन वीडियो नहीं बना पाया।"));
+        videoUrls.push(data.videoUrl);
       }
-      const blob = await fileResponse.blob();
-      if (blob.size < 20000 || !blob.type.includes("video")) throw new Error("AI इंजन से वैध वीडियो फ़ाइल नहीं मिली।");
-      const filename = "international-ai-3d-" + Date.now() + ".mp4";
-      await saveVideoToLibrary(blob, filename, Number(data.durationSeconds) || 3);
+      setStatus("तीनों AI दृश्य बन गए। अब उन्हें एक MP4 कहानी में जोड़ा जा रहा है…");
+      const joined = await fetch(window.location.origin + "/api/stitch-ai-videos", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoUrls })
+      });
+      if (!joined.ok) {
+        const detail = await joined.json().catch(() => ({}));
+        throw new Error(detail.error || "तीनों AI दृश्यों को एक MP4 में नहीं जोड़ा जा सका।");
+      }
+      const blob = await joined.blob();
+      if (blob.size < 20000 || !blob.type.includes("video")) throw new Error("जुड़ी हुई AI वीडियो वैध MP4 नहीं है।");
+      const filename = "international-ai-3d-story-" + Date.now() + ".mp4";
+      await saveVideoToLibrary(blob, filename, 9);
       await refreshSavedVideos();
-      setStatus("🎉 असली AI से बनी छोटी 3D MP4 क्लिप Library में सेव हो गई है। अभी इंजन लगभग 3 सेकंड की क्लिप देता है; पूरी 30 सेकंड/1–3 मिनट कहानी अभी उपलब्ध नहीं है।");
+      setStatus("🎉 तीन असली AI 3D दृश्यों को जोड़कर एक छोटी MP4 कहानी Library में सेव हो गई है। अभी यह लगभग 6–9 सेकंड की टेस्ट कहानी है; 30 सेकंड/1–3 मिनट और पूरी लंबी फिल्म अभी उपलब्ध नहीं है।");
     } catch (error) {
       setStatus("AI वीडियो नहीं बन पाई: " + (error.message || "मुफ़्त साझा GPU व्यस्त हो सकता है।"));
     } finally {
