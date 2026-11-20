@@ -330,6 +330,7 @@ function App() {
       <header className="editor-header">
         <a href="/" className="back-link">← मुख्य ऐप</a>
         <div><strong>🎭 AI कार्टून वीडियो मेकर</strong><small>एक आदेश → AI कहानी + वीडियो + हिंदी आवाज़ → MP4</small></div>
+        <a href="https://www.reelshort.com/" target="_blank" rel="noopener noreferrer" className="back-link" aria-label="ReelShort आधिकारिक वेबसाइट खोलें">📺 ReelShort देखें ↗</a>
       </header>
       <section className="director-bar" id="ai-video-studio">
         <div className="director-actions">
