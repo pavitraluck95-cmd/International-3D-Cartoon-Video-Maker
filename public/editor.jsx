@@ -274,7 +274,7 @@ function App() {
       };
       setStatus("फोन की हिंदी आवाज़ तैयार हो रही है…");
       const narration = await makeHindiNarration(dialogueStory);
-      if (!narration) throw new Error("हिंदी आवाज़ के लिए Android APK की Text-to-Speech सुविधा उपलब्ध नहीं है।");
+      if (typeof narration !== "string" || !narration.startsWith("data:audio/")) throw new Error("मुफ़्त हिंदी AI आवाज़ तैयार नहीं हो पाई।");
       for (let i = 0; i < beats.length; i++) {
         setStatus("AI कहानी का दृश्य " + (i + 1) + "/5 बन रहा है… हर दृश्य लगभग 7 सेकंड का होगा।");
         const generated = await fetch(API_BASE + "/api/generate", {
