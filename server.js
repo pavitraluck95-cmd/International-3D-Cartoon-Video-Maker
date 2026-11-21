@@ -232,11 +232,8 @@ app.post("/api/generate", async (req, res) => {
     console.log("HF video generated successfully:", videoUrl.slice(0, 180));
     return res.json({ videoUrl, durationSeconds: 7, message: "लगभग 7 सेकंड की 9:16 AI वीडियो तैयार है।" });
   } catch (error) {
-    console.error("Video generation request failed:", error?.name, error?.message);
-    const message = error?.name === "TimeoutError" || error?.name === "AbortError"
-      ? "मुफ़्त इंजन की कतार में बहुत देर हो गई। थोड़ी देर बाद फिर कोशिश करें।"
-      : "मुफ़्त AI इंजन से संपर्क नहीं हो पाया। थोड़ी देर बाद फिर कोशिश करें।";
-    return res.status(502).json({ error: message });
+    console.error("Primary video generation request failed; trying LTX-2.5 fallback:", error?.name, error?.message);
+    return await sendLtx25Fallback(res, prompt, error?.message || "primary engine request failed");
   }
 });
 
