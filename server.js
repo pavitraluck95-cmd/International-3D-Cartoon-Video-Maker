@@ -678,3 +678,4 @@ app.get("*", (_req, res) => res.sendFile(path.join(distDir, "index.html"), (err)
 app.listen(port, "0.0.0.0", () => console.log("App listening on " + port));
 
 // FFmpeg fix: use CFR fps_mode with output frame rate; do not combine -r with VFR vsync.
+// Deployment marker: ensure the latest Hindi TTS and MP4 stitching fixes are deployed.
