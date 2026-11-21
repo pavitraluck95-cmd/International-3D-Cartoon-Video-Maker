@@ -118,28 +118,24 @@ function openVoiceSettings() {
 }
 
 async function makeHindiNarration(story) {
-  if (!window.AndroidTTS || typeof window.AndroidTTS.synthesize !== "function") return null;
-  for (let i = 0; i < 80 && !window.AndroidTTS.isReady(); i++) {
-    await new Promise(resolve => setTimeout(resolve, 250));
-  }
-  if (!window.AndroidTTS.isReady()) {
-    throw new Error("फोन में हिंदी Text-to-Speech आवाज़ तैयार नहीं हुई।");
-  }
   const script = (story.scenes || []).map(scene => scene.dialogue).filter(Boolean).join("। ");
   if (!script.trim()) throw new Error("कहानी में बोलने के लिए डायलॉग नहीं मिले।");
-  const id = "tts" + Date.now().toString(36);
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      delete nativeTtsChunks[id];
-      reject(new Error("हिंदी आवाज़ बनाने में समय लग गया।"));
-    }, 120000);
-    nativeTtsChunks[id] = { parts: [], resolve, reject, timer };
-    if (!window.AndroidTTS.synthesize(script.slice(0, 12000), id)) {
-      delete nativeTtsChunks[id];
-      clearTimeout(timer);
-      reject(new Error("फोन की हिंदी आवाज़ शुरू नहीं हो सकी।"));
-    }
+  // Use server-side free Kokoro Hindi TTS; this works in both the web app and Android APK.
+  const response = await fetch(API_BASE + "/api/ai-audio", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ input: script.slice(0, 5000), voice: "hm_omega", speed: 0.95, lang: "hi" })
   });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(detail.error || "मुफ़्त हिंदी AI आवाज़ तैयार नहीं हो पाई।");
+  }
+  const blob = await response.blob();
+  if (!blob.size || !blob.type.includes("audio")) throw new Error("हिंदी AI सेवा से वैध ऑडियो नहीं मिला।");
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return "data:audio/mpeg;base64," + btoa(binary);
 }
 
 function downloadSavedVideo(item) {
