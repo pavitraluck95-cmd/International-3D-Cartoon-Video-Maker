@@ -31,6 +31,24 @@ app.get("/api/health", (_req, res) => res.json({ ok: true, app: "International 3
 // Secondary public engine: official LTX-2.5 Gradio Space. It is attempted only
 // when the primary LTX 0.9.8 Space fails. Anonymous ZeroGPU access is best-effort;
 // the short 2-second clip keeps the fallback request within a small quota budget.
+async function sendLtx25Fallback(res, prompt, primaryReason) {
+  try {
+    const videoUrl = await requestLtx25Fallback(prompt);
+    console.log("LTX-2.5 fallback generated successfully:", videoUrl.slice(0, 180));
+    return res.json({
+      videoUrl,
+      durationSeconds: 2,
+      engine: "LTX-2.5 fallback",
+      message: "बैकअप मुफ्त AI इंजन से छोटी क्लिप तैयार है।"
+    });
+  } catch (fallbackError) {
+    console.error("LTX-2.5 fallback also unavailable:", fallbackError?.message || fallbackError);
+    return res.status(502).json({
+      error: "मुख्य और बैकअप दोनों मुफ्त AI इंजन अभी वीडियो नहीं बना पाए। थोड़ी देर बाद फिर कोशिश करें।"
+    });
+  }
+}
+
 async function requestLtx25Fallback(prompt) {
   const base = "https://lightricks-ltx-2-5.hf.space";
   const submit = await fetch(base + "/gradio_api/call/run", {
@@ -116,16 +134,14 @@ app.post("/api/generate", async (req, res) => {
       });
       if (!submit.ok) {
         const detail = (await submit.text()).slice(0, 500);
-        console.error("HF submit failed:", submit.status, detail);
-        return res.status(502).json({ error: submit.status === 503 || submit.status === 429
-          ? "मुफ़्त AI इंजन की GPU कतार अभी भरी है। थोड़ी देर बाद फिर कोशिश करें।"
-          : "AI इंजन ने अनुरोध स्वीकार नहीं किया (HTTP " + submit.status + ")।" });
+        console.error("HF submit failed; trying LTX-2.5 fallback:", submit.status, detail);
+        return await sendLtx25Fallback(res, prompt, "HTTP " + submit.status);
       }
 
       const queued = await submit.json();
       if (!queued.event_id) {
-        console.error("HF returned no event id:", JSON.stringify(queued).slice(0, 800));
-        return res.status(502).json({ error: "AI इंजन ने काम शुरू नहीं किया। कृपया थोड़ी देर बाद फिर कोशिश करें।" });
+        console.error("HF returned no event id; trying LTX-2.5 fallback:", JSON.stringify(queued).slice(0, 800));
+        return await sendLtx25Fallback(res, prompt, "missing primary event id");
       }
 
       result = await fetch(base + "/gradio_api/call/text_to_video/" + encodeURIComponent(queued.event_id), {
@@ -134,8 +150,8 @@ app.post("/api/generate", async (req, res) => {
       });
       if (!result.ok) {
         const detail = (await result.text()).slice(0, 500);
-        console.error("HF result failed:", result.status, detail);
-        return res.status(502).json({ error: "AI इंजन से वीडियो परिणाम नहीं मिला (HTTP " + result.status + ")।" });
+        console.error("HF result failed; trying LTX-2.5 fallback:", result.status, detail);
+        return await sendLtx25Fallback(res, prompt, "result HTTP " + result.status);
       }
 
       raw = await result.text();
@@ -163,18 +179,7 @@ app.post("/api/generate", async (req, res) => {
 
     if (engineError || !completedData) {
       console.warn("Primary LTX engine did not complete; trying the LTX-2.5 public fallback:", engineError || "missing completion event");
-      try {
-        const fallbackUrl = await requestLtx25Fallback(prompt);
-        console.log("LTX-2.5 fallback generated successfully:", fallbackUrl.slice(0, 180));
-        return res.json({
-          videoUrl: fallbackUrl,
-          durationSeconds: 2,
-          engine: "LTX-2.5 fallback",
-          message: "बैकअप मुफ्त AI इंजन से 2 सेकंड की क्लिप तैयार है।"
-        });
-      } catch (fallbackError) {
-        console.error("LTX-2.5 fallback also unavailable:", fallbackError?.message || fallbackError);
-      }
+      return await sendLtx25Fallback(res, prompt, engineError || "missing primary completion");
       if (engineError) {
         console.error("HF generation event error; raw SSE:", raw.slice(-3000));
         let detail = engineError;
