@@ -28,6 +28,66 @@ app.use(express.static(publicDir));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true, app: "International 3D Cartoon Video Maker" }));
 
+// Secondary public engine: official LTX-2.5 Gradio Space. It is attempted only
+// when the primary LTX 0.9.8 Space fails. Anonymous ZeroGPU access is best-effort;
+// the short 2-second clip keeps the fallback request within a small quota budget.
+async function requestLtx25Fallback(prompt) {
+  const base = "https://lightricks-ltx-2-5.hf.space";
+  const submit = await fetch(base + "/gradio_api/call/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data: [
+      prompt, null, 576, 1024, 2.0, 42, "conv", false, true, false
+    ] }),
+    signal: AbortSignal.timeout(60000)
+  });
+  if (!submit.ok) throw new Error("LTX-2.5 submit HTTP " + submit.status);
+  const queued = await submit.json();
+  if (!queued.event_id) throw new Error("LTX-2.5 did not return an event id");
+  const response = await fetch(base + "/gradio_api/call/run/" + encodeURIComponent(queued.event_id), {
+    headers: { "Accept": "text/event-stream" },
+    signal: AbortSignal.timeout(8 * 60 * 1000)
+  });
+  if (!response.ok) throw new Error("LTX-2.5 result HTTP " + response.status);
+  const raw = await response.text();
+  let completed = null;
+  let failed = "";
+  for (const block of raw.split(/\r?\n\r?\n/)) {
+    const event = block.match(/^event:\s*(\S+)/m)?.[1];
+    const data = block.split(/\r?\n/).filter(line => line.startsWith("data:"))
+      .map(line => line.slice(5).trim()).join("\n");
+    if (event === "error") failed = data || "unknown LTX-2.5 error";
+    if ((event === "complete" || event === "success") && data) {
+      try { completed = JSON.parse(data); } catch { completed = data; }
+    }
+  }
+  if (failed) throw new Error("LTX-2.5 generation failed: " + failed.slice(0, 180));
+  const findPath = value => {
+    if (!value) return null;
+    if (typeof value === "string") {
+      if (/^https?:\/\//i.test(value)) return value;
+      if (/\.mp4(?:$|[?#])/i.test(value) || value.startsWith("/tmp/") || value.startsWith("tmp/")) {
+        return base + "/gradio_api/file=" + encodeURIComponent(value.startsWith("/") ? value : "/" + value);
+      }
+      try { const parsed = JSON.parse(value); if (parsed !== value) return findPath(parsed); } catch {}
+      return null;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) { const found = findPath(item); if (found) return found; }
+    } else if (typeof value === "object") {
+      if (typeof value.url === "string" && value.url) return /^https?:\/\//i.test(value.url) ? value.url : new URL(value.url, base).href;
+      if (typeof value.path === "string" && value.path) return findPath(value.path);
+      for (const key of ["video", "data", "value", "output", "files"]) {
+        const found = findPath(value[key]); if (found) return found;
+      }
+    }
+    return null;
+  };
+  const videoUrl = findPath(completed);
+  if (!videoUrl) throw new Error("LTX-2.5 completed without an MP4 path");
+  return videoUrl;
+}
+
 // Anonymous access to the public Hugging Face Gradio Space. Shared free GPU may be busy.
 app.post("/api/generate", async (req, res) => {
   const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
@@ -101,22 +161,35 @@ app.post("/api/generate", async (req, res) => {
       break;
     }
 
-    if (engineError) {
-      console.error("HF generation event error; raw SSE:", raw.slice(-3000));
-      let detail = engineError;
-      try { detail = JSON.stringify(JSON.parse(engineError)); } catch {}
-      const isEmptyError = /^null$/i.test(engineError);
-      return res.status(502).json({
-        error: isEmptyError
-          ? "मुफ़्त Hugging Face GPU ने दो कोशिशों के बाद भी वीडियो शुरू नहीं की। यह साझा GPU की अस्थायी समस्या है; थोड़ी देर बाद फिर कोशिश करें।"
-          : /queue|busy|capacity|gpu|zero.?gpu|rate.?limit|429|503/i.test(detail)
-            ? "मुफ़्त AI इंजन की GPU कतार भरी है। थोड़ी देर बाद फिर कोशिश करें।"
-            : "AI इंजन ने वीडियो बनाने से मना किया: " + detail.slice(0, 220)
-      });
-    }
-    if (!completedData) {
+    if (engineError || !completedData) {
+      console.warn("Primary LTX engine did not complete; trying the LTX-2.5 public fallback:", engineError || "missing completion event");
+      try {
+        const fallbackUrl = await requestLtx25Fallback(prompt);
+        console.log("LTX-2.5 fallback generated successfully:", fallbackUrl.slice(0, 180));
+        return res.json({
+          videoUrl: fallbackUrl,
+          durationSeconds: 2,
+          engine: "LTX-2.5 fallback",
+          message: "बैकअप मुफ्त AI इंजन से 2 सेकंड की क्लिप तैयार है।"
+        });
+      } catch (fallbackError) {
+        console.error("LTX-2.5 fallback also unavailable:", fallbackError?.message || fallbackError);
+      }
+      if (engineError) {
+        console.error("HF generation event error; raw SSE:", raw.slice(-3000));
+        let detail = engineError;
+        try { detail = JSON.stringify(JSON.parse(engineError)); } catch {}
+        const isEmptyError = /^null$/i.test(engineError);
+        return res.status(502).json({
+          error: isEmptyError
+            ? "दोनों मुफ्त AI इंजन अभी उपलब्ध नहीं हैं। थोड़ी देर बाद फिर कोशिश करें।"
+            : /queue|busy|capacity|gpu|zero.?gpu|rate.?limit|429|503/i.test(detail)
+              ? "दोनों मुफ्त AI इंजनों की GPU कतार अभी भरी है। थोड़ी देर बाद फिर कोशिश करें।"
+              : "दोनों AI इंजन वीडियो नहीं बना पाए: " + detail.slice(0, 180)
+        });
+      }
       console.error("HF no completion event; content-type:", result?.headers.get("content-type"), "full response tail:", raw.slice(-3000));
-      return res.status(502).json({ error: "AI इंजन ने पूरा परिणाम नहीं लौटाया। कृपया थोड़ी देर बाद फिर कोशिश करें।" });
+      return res.status(502).json({ error: "दोनों मुफ्त AI इंजन से वीडियो परिणाम नहीं मिला। थोड़ी देर बाद फिर कोशिश करें।" });
     }
 
     const findVideo = (value) => {
