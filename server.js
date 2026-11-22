@@ -42,10 +42,15 @@ async function sendLtx25Fallback(res, prompt, primaryReason) {
       message: "बैकअप मुफ्त AI इंजन से छोटी क्लिप तैयार है।"
     });
   } catch (fallbackError) {
-    console.error("LTX-2.5 fallback also unavailable:", fallbackError?.message || fallbackError);
-    return res.status(502).json({
-      error: "मुख्य और बैकअप दोनों मुफ्त AI इंजन अभी वीडियो नहीं बना पाए। थोड़ी देर बाद फिर कोशिश करें।"
-    });
+    const detail = String(fallbackError?.message || fallbackError);
+    console.error("LTX-2.5 fallback also unavailable:", detail);
+    const quotaWait = detail.match(/Try again in\\s+([0-9:]+)/i)?.[1];
+    const userMessage = /exceeded your ZeroGPU quota/i.test(detail)
+      ? "मुफ्त AI इंजन की साझा GPU सीमा अभी पूरी है। " +
+        (quotaWait ? "लगभग " + quotaWait + " बाद" : "कुछ देर बाद") +
+        " फिर कोशिश करें। किसी भुगतान या API key की जरूरत नहीं।"
+      : "मुख्य और बैकअप दोनों मुफ्त AI इंजन अभी वीडियो नहीं बना पाए। थोड़ी देर बाद फिर कोशिश करें।";
+    return res.status(502).json({ error: userMessage });
   }
 }
 
