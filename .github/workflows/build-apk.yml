@@ -176,6 +176,18 @@ jobs:
                   }
                 });
               }
+
+              @JavascriptInterface public void installHindiData() {
+                runOnUiThread(() -> {
+                  try {
+                    Intent install = new Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+                    install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(install);
+                  } catch (Exception error) {
+                    openTtsSettings();
+                  }
+                });
+              }
             }
 
             public class GallerySaver {
