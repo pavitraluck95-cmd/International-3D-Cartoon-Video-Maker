@@ -353,6 +353,8 @@ function App() {
           
           
           <button onClick={createWholeCartoon} disabled={busy}>{busy ? "AI काम कर रहा है…" : "🎬 मेरी आज की 3D वीडियो तैयार करो"}</button>
+          <a href="https://reccloud.com/ai-short-video-generator" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", marginTop: 10, padding: "12px 18px", borderRadius: 12, fontWeight: 800, color: "#fff", background: "#2563eb", textDecoration: "none" }}>🌐 RecCloud AI वीडियो विकल्प ↗</a>
+          <p className="editor-note" style={{ marginTop: 8 }}>RecCloud बाहरी सेवा है। वहाँ वीडियो बनाना आपके RecCloud खाते/उपलब्ध क्रेडिट पर निर्भर है; यह ऐप की Library में अपने-आप MP4 नहीं भेजेगा।</p>
         </div>
         <details style={{ marginTop: 12 }}>
           <summary style={{ cursor: "pointer", color: "#cbd5e1" }}>विषय बदलना चाहें? (वैकल्पिक)</summary>
