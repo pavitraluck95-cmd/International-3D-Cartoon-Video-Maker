@@ -303,24 +303,27 @@ app.post("/api/stitch-ai-videos", async (req, res) => {
     const output = path.join(dir, "joined.mp4");
     const narration = typeof req.body?.narration === "string" ? req.body.narration : "";
     const audioMatch = narration.match(/^data:audio\/(wav|x-wav|mpeg|mp3);base64,([A-Za-z0-9+/=]+)$/);
-    if (!audioMatch) throw new Error("हिंदी आवाज़ नहीं मिली; बिना आवाज़ वाली MP4 नहीं बनाई जाएगी।");
-    const audio = Buffer.from(audioMatch[2], "base64");
-    const isWav = audioMatch[1] === "wav" || audioMatch[1] === "x-wav";
-    if (audio.length < (isWav ? 44 : 128) || audio.length > 12 * 1024 * 1024 ||
-        (isWav && (audio.toString("ascii", 0, 4) !== "RIFF" || audio.toString("ascii", 8, 12) !== "WAVE")) ||
-        (!isWav && !(audio.toString("ascii", 0, 3) === "ID3" || audio[0] === 0xff))) {
-      throw new Error("हिंदी आवाज़ की ऑडियो फ़ाइल अधूरी या अमान्य है।");
+    const args = ["-y", "-f", "concat", "-safe", "0", "-i", concatFile];
+    if (audioMatch) {
+      const audio = Buffer.from(audioMatch[2], "base64");
+      const isWav = audioMatch[1] === "wav" || audioMatch[1] === "x-wav";
+      if (audio.length < (isWav ? 44 : 128) || audio.length > 12 * 1024 * 1024 ||
+          (isWav && (audio.toString("ascii", 0, 4) !== "RIFF" || audio.toString("ascii", 8, 12) !== "WAVE")) ||
+          (!isWav && !(audio.toString("ascii", 0, 3) === "ID3" || audio[0] === 0xff))) {
+        throw new Error("हिंदी आवाज़ की ऑडियो फ़ाइल अधूरी या अमान्य है।");
+      }
+      const voiceFile = path.join(dir, isWav ? "voice.wav" : "voice.mp3");
+      await fs.writeFile(voiceFile, audio);
+      args.push("-i", voiceFile, "-map", "0:v:0", "-map", "1:a:0",
+        "-c:a", "aac", "-b:a", "96k", "-af", "apad");
+    } else {
+      console.warn("No device narration supplied; rendering a silent AI video fallback.");
+      args.push("-map", "0:v:0", "-an");
     }
-    const voiceFile = path.join(dir, isWav ? "voice.wav" : "voice.mp3");
-    await fs.writeFile(voiceFile, audio);
-    await runFfmpeg([
-      "-y", "-f", "concat", "-safe", "0", "-i", concatFile, "-i", voiceFile,
-      "-map", "0:v:0", "-map", "1:a:0",
-      "-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=24",
+    args.push("-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=24",
       "-c:v", "libx264", "-preset", "veryfast", "-crf", "25",
-      "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-af", "apad",
-      "-t", "30", "-shortest", "-movflags", "+faststart", output
-    ]);
+      "-pix_fmt", "yuv420p", "-t", "30", "-movflags", "+faststart", output);
+    await runFfmpeg(args);
     const result = await fs.readFile(output);
     if (!result.length) throw new Error("जुड़ी हुई MP4 फ़ाइल खाली है।");
     res.setHeader("Content-Type", "video/mp4");
