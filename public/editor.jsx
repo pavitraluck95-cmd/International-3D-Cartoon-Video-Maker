@@ -292,9 +292,15 @@ function App() {
           { dialogue: "बागड़बिल्ला: मान गया मूषक, आज तुम जीते। लेकिन अगली कहानी में फिर मुकाबला होगा!" }
         ]
       };
-      setStatus("फोन की हिंदी आवाज़ तैयार हो रही है…");
-      const narration = await makeHindiNarration(dialogueStory);
-      if (typeof narration !== "string" || !narration.startsWith("data:audio/")) throw new Error("मुफ़्त हिंदी AI आवाज़ तैयार नहीं हो पाई।");
+      let narration = "";
+      try {
+        setStatus("फोन की हिंदी आवाज़ तैयार हो रही है…");
+        narration = await makeHindiNarration(dialogueStory);
+        if (typeof narration !== "string" || !narration.startsWith("data:audio/")) narration = "";
+      } catch (voiceError) {
+        console.warn("Device Hindi TTS unavailable; continue with silent video fallback:", voiceError?.message);
+        setStatus("फोन की हिंदी आवाज़ उपलब्ध नहीं है। वीडियो बिना आवाज़ के बनाने की कोशिश जारी है…");
+      }
       for (let i = 0; i < beats.length; i++) {
         setStatus("AI कहानी का दृश्य " + (i + 1) + "/5 बन रहा है… हर दृश्य लगभग 7 सेकंड का होगा।");
         let generated = null;
@@ -337,7 +343,7 @@ function App() {
         }
         videoUrls.push(data.videoUrl);
       }
-      setStatus("पाँचों AI दृश्य बन गए। अब लगभग 30 सेकंड की 9:16 Shorts MP4 जोड़ी जा रही है…");
+      setStatus("पाँचों AI दृश्य बन गए। अब 9:16 Shorts MP4 जोड़ी जा रही है" + (narration ? " और आवाज़ लगाई जा रही है…" : " (बिना आवाज़)…"));
       const joined = await fetch(API_BASE + "/api/stitch-ai-videos", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoUrls, narration })
