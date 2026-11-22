@@ -110,10 +110,13 @@ window.onNativeTtsError = (id, message) => {
 };
 
 function openVoiceSettings() {
-  if (window.AndroidTTS && typeof window.AndroidTTS.openTtsSettings === "function") {
-    window.AndroidTTS.openTtsSettings();
+  const bridge = window.AndroidTTS || window.parent?.AndroidTTS;
+  if (bridge && typeof bridge.installHindiData === "function") {
+    bridge.installHindiData();
+  } else if (bridge && typeof bridge.openTtsSettings === "function") {
+    bridge.openTtsSettings();
   } else {
-    window.alert("यह विकल्प केवल Android APK में उपलब्ध है।");
+    window.alert("फोन की हिंदी आवाज़ सुविधा APK में उपलब्ध नहीं है। कृपया नवीनतम APK इस्तेमाल करें।");
   }
 }
 
@@ -121,49 +124,38 @@ async function makeHindiNarration(story) {
   const script = (story.scenes || []).map(scene => scene.dialogue).filter(Boolean).join("। ");
   if (!script.trim()) throw new Error("कहानी में बोलने के लिए डायलॉग नहीं मिले।");
   const text = script.slice(0, 5000);
+  const bridge = window.AndroidTTS || window.parent?.AndroidTTS;
 
-  // Prefer the phone's built-in Android Hindi Text-to-Speech. This is free
-  // and avoids a third-party API that may require authentication (HTTP 401).
-  const bridge = window.AndroidTTS;
-  if (bridge && typeof bridge.isReady === "function" &&
-      typeof bridge.synthesize === "function" && bridge.isReady()) {
-    const id = "hindi-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
-    return await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        delete nativeTtsChunks[id];
-        reject(new Error("फोन की हिंदी आवाज़ ने समय पर जवाब नहीं दिया।"));
-      }, 90000);
-      nativeTtsChunks[id] = { parts: [], timer, resolve, reject };
-      try {
-        if (!bridge.synthesize(text, id)) {
-          delete nativeTtsChunks[id];
-          clearTimeout(timer);
-          reject(new Error("फोन में हिंदी Text-to-Speech आवाज़ तैयार नहीं है। आवाज़ सेटिंग में हिंदी भाषा इंस्टॉल करें।"));
-        }
-      } catch (error) {
+  // On Android, always use the phone's built-in TTS. Never fall through to
+  // the unauthenticated third-party endpoint that returned HTTP 401.
+  if (!bridge || typeof bridge.isReady !== "function" || typeof bridge.synthesize !== "function") {
+    throw new Error("इस APK में फोन की हिंदी आवाज़ सुविधा नहीं मिली। नवीनतम APK इंस्टॉल करना होगा।");
+  }
+  if (!bridge.isReady()) {
+    if (typeof bridge.installHindiData === "function") bridge.installHindiData();
+    else if (typeof bridge.openTtsSettings === "function") bridge.openTtsSettings();
+    throw new Error("फोन में हिंदी Text-to-Speech आवाज़ इंस्टॉल/चालू करें। आवाज़ इंस्टॉल होने के बाद वीडियो फिर बनाएं।");
+  }
+
+  const id = "hindi-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+  return await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      delete nativeTtsChunks[id];
+      reject(new Error("फोन की हिंदी आवाज़ ने समय पर जवाब नहीं दिया।"));
+    }, 90000);
+    nativeTtsChunks[id] = { parts: [], timer, resolve, reject };
+    try {
+      if (!bridge.synthesize(text, id)) {
         delete nativeTtsChunks[id];
         clearTimeout(timer);
-        reject(error);
+        reject(new Error("फोन में हिंदी आवाज़ तैयार नहीं हो पाई। हिंदी TTS आवाज़ इंस्टॉल करें।"));
       }
-    });
-  }
-
-  // Web fallback; may be unavailable if the provider requires authentication.
-  const response = await fetch(API_BASE + "/api/ai-audio", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ input: text, voice: "hm_omega", speed: 0.95, lang: "hi" })
+    } catch (error) {
+      delete nativeTtsChunks[id];
+      clearTimeout(timer);
+      reject(error);
+    }
   });
-  if (!response.ok) {
-    const detail = await response.json().catch(() => ({}));
-    throw new Error(detail.error || "मुफ़्त हिंदी AI आवाज़ तैयार नहीं हो पाई।");
-  }
-  const blob = await response.blob();
-  if (!blob.size || !blob.type.includes("audio")) throw new Error("हिंदी AI सेवा से वैध ऑडियो नहीं मिला।");
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return "data:audio/mpeg;base64," + btoa(binary);
 }
 
 function downloadSavedVideo(item) {
