@@ -120,11 +120,39 @@ function openVoiceSettings() {
 async function makeHindiNarration(story) {
   const script = (story.scenes || []).map(scene => scene.dialogue).filter(Boolean).join("। ");
   if (!script.trim()) throw new Error("कहानी में बोलने के लिए डायलॉग नहीं मिले।");
-  // Use server-side free Kokoro Hindi TTS; this works in both the web app and Android APK.
+  const text = script.slice(0, 5000);
+
+  // Prefer the phone's built-in Android Hindi Text-to-Speech. This is free
+  // and avoids a third-party API that may require authentication (HTTP 401).
+  const bridge = window.AndroidTTS;
+  if (bridge && typeof bridge.isReady === "function" &&
+      typeof bridge.synthesize === "function" && bridge.isReady()) {
+    const id = "hindi-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+    return await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        delete nativeTtsChunks[id];
+        reject(new Error("फोन की हिंदी आवाज़ ने समय पर जवाब नहीं दिया।"));
+      }, 90000);
+      nativeTtsChunks[id] = { parts: [], timer, resolve, reject };
+      try {
+        if (!bridge.synthesize(text, id)) {
+          delete nativeTtsChunks[id];
+          clearTimeout(timer);
+          reject(new Error("फोन में हिंदी Text-to-Speech आवाज़ तैयार नहीं है। आवाज़ सेटिंग में हिंदी भाषा इंस्टॉल करें।"));
+        }
+      } catch (error) {
+        delete nativeTtsChunks[id];
+        clearTimeout(timer);
+        reject(error);
+      }
+    });
+  }
+
+  // Web fallback; may be unavailable if the provider requires authentication.
   const response = await fetch(API_BASE + "/api/ai-audio", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ input: script.slice(0, 5000), voice: "hm_omega", speed: 0.95, lang: "hi" })
+    body: JSON.stringify({ input: text, voice: "hm_omega", speed: 0.95, lang: "hi" })
   });
   if (!response.ok) {
     const detail = await response.json().catch(() => ({}));
