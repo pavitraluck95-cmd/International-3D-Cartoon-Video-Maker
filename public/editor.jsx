@@ -297,12 +297,44 @@ function App() {
       if (typeof narration !== "string" || !narration.startsWith("data:audio/")) throw new Error("मुफ़्त हिंदी AI आवाज़ तैयार नहीं हो पाई।");
       for (let i = 0; i < beats.length; i++) {
         setStatus("AI कहानी का दृश्य " + (i + 1) + "/5 बन रहा है… हर दृश्य लगभग 7 सेकंड का होगा।");
-        const generated = await fetch(API_BASE + "/api/generate", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: characterLock + " " + beats[i] })
-        });
-        const data = await generated.json().catch(() => ({}));
-        if (!generated.ok || !data.videoUrl) throw new Error("दृश्य " + (i + 1) + ": " + (data.error || "AI इंजन वीडियो नहीं बना पाया।"));
+        let generated = null;
+        let data = {};
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            generated = await fetch(API_BASE + "/api/generate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ prompt: characterLock + " " + beats[i] }),
+              signal: AbortSignal.timeout(10 * 60 * 1000)
+            });
+            data = await generated.json().catch(() => ({}));
+            if (generated.ok && data.videoUrl) break;
+            const message = String(data.error || "");
+            const quotaOrCapacity = /quota|exceeded|zero.?gpu|runs limit|limit.*gpu|credits/i.test(message);
+            const temporary = [502, 503, 504, 408].includes(generated.status);
+            if (attempt === 0 && temporary && !quotaOrCapacity) {
+              setStatus("दृश्य " + (i + 1) + " में अस्थायी सर्वर रुकावट आई है। एक बार फिर कोशिश कर रहे हैं…");
+              await new Promise(resolve => setTimeout(resolve, 2500));
+              continue;
+            }
+            throw new Error(message || ("HTTP " + generated.status));
+          } catch (requestError) {
+            if (attempt === 0 && requestError.name === "AbortError") {
+              setStatus("दृश्य " + (i + 1) + " का जवाब देर से आ रहा है। एक बार फिर कोशिश कर रहे हैं…");
+              await new Promise(resolve => setTimeout(resolve, 2500));
+              continue;
+            }
+            if (attempt === 0 && (requestError instanceof TypeError || requestError.name === "TimeoutError")) {
+              setStatus("नेटवर्क/सर्वर की अस्थायी रुकावट। दृश्य " + (i + 1) + " फिर से कोशिश हो रही है…");
+              await new Promise(resolve => setTimeout(resolve, 2500));
+              continue;
+            }
+            throw requestError;
+          }
+        }
+        if (!generated || !generated.ok || !data.videoUrl) {
+          throw new Error("दृश्य " + (i + 1) + ": " + (data.error || "AI इंजन वीडियो नहीं बना पाया।"));
+        }
         videoUrls.push(data.videoUrl);
       }
       setStatus("पाँचों AI दृश्य बन गए। अब लगभग 30 सेकंड की 9:16 Shorts MP4 जोड़ी जा रही है…");
@@ -312,12 +344,12 @@ function App() {
       });
       if (!joined.ok) {
         const detail = await joined.json().catch(() => ({}));
-        throw new Error(detail.error || "तीनों AI दृश्यों को एक MP4 में नहीं जोड़ा जा सका।");
+        throw new Error(detail.error || "पाँचों AI दृश्यों को एक MP4 में नहीं जोड़ा जा सका।");
       }
       const blob = await joined.blob();
       if (blob.size < 20000 || !blob.type.includes("video")) throw new Error("जुड़ी हुई AI वीडियो वैध MP4 नहीं है।");
       const filename = "international-ai-3d-story-" + Date.now() + ".mp4";
-      await saveVideoToLibrary(blob, filename, 30);
+      await saveVideoToLibrary(blob, filename, 35);
       await refreshSavedVideos();
       setStatus("🎉 पाँच AI दृश्यों को जोड़कर लगभग 30 सेकंड की 9:16 Shorts MP4 Library में सेव हो गई है।");
     } catch (error) {
