@@ -45,7 +45,7 @@ async function sendLtx25Fallback(res, prompt, primaryReason) {
     const detail = String(fallbackError?.message || fallbackError);
     console.error("LTX-2.5 fallback also unavailable:", detail);
     const quotaWait = detail.match(/Try again in\s+([0-9:]+)/i)?.[1];
-    const userMessage = /exceeded your ZeroGPU quota/i.test(detail)
+    const userMessage = /(?:exceeded your ZeroGPU quota|ZeroGPU runs limit)/i.test(detail)
       ? "मुफ्त AI इंजन की साझा GPU सीमा अभी पूरी है। " +
         (quotaWait ? "लगभग " + quotaWait + " बाद" : "कुछ देर बाद") +
         " फिर कोशिश करें। किसी भुगतान या API key की जरूरत नहीं।"
