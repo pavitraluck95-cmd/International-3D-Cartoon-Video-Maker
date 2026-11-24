@@ -132,13 +132,13 @@ async function requestAgnesVideo(prompt, options = {}) {
   const payload = {
     model: AGNES_VIDEO_MODEL,
     prompt,
-    mode: options.imageData ? "reference" : "text",
+    mode: options.imageData ? "keyframe" : "text",
     seconds,
     size: "720P",
     aspect_ratio: "9:16",
     n: 1
   };
-  if (options.imageData) payload.images = [options.imageData];
+  if (options.imageData) payload.first_frame = options.imageData;
   const headers = { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json" };
   const created = await fetch(AGNES_API_ROOT + "/v1/videos", {
     method: "POST", headers, body: JSON.stringify(payload),
