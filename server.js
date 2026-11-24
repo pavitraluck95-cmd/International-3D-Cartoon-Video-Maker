@@ -120,8 +120,92 @@ async function requestLtx25Fallback(prompt) {
   return videoUrl;
 }
 
+// Agnes AI Video 2.5 Flash integration. The key is read only from the server environment;
+// it is never sent to the phone or stored in the repository.
+const AGNES_API_ROOT = "https://apihub.agnes-ai.com";
+const AGNES_VIDEO_MODEL = "agnes-video-2.5-flash";
+
+async function requestAgnesVideo(prompt, options = {}) {
+  const apiKey = process.env.AGNES_API_KEY;
+  if (!apiKey) throw new Error("AGNES_API_KEY is not configured on the server");
+  const seconds = String(Math.max(4, Math.min(12, Number(options.seconds) || 8)));
+  const payload = {
+    model: AGNES_VIDEO_MODEL,
+    prompt,
+    mode: options.imageData ? "reference" : "text",
+    seconds,
+    size: "720P",
+    aspect_ratio: "9:16",
+    n: 1
+  };
+  if (options.imageData) payload.images = [options.imageData];
+  const headers = { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json" };
+  const created = await fetch(AGNES_API_ROOT + "/v1/videos", {
+    method: "POST", headers, body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(60000)
+  });
+  const createdText = await created.text();
+  let task;
+  try { task = JSON.parse(createdText); } catch { throw new Error("Agnes returned an invalid create response (HTTP " + created.status + ")"); }
+  if (!created.ok) {
+    const detail = String(task.error?.message || task.message || task.error || "HTTP " + created.status);
+    throw new Error("Agnes create failed: " + detail.slice(0, 240));
+  }
+  const videoId = task.video_id || task.id;
+  if (!videoId) throw new Error("Agnes did not return a video_id");
+  const deadline = Date.now() + 8 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    const query = new URL(AGNES_API_ROOT + "/agnesapi");
+    query.searchParams.set("video_id", videoId);
+    query.searchParams.set("model_name", AGNES_VIDEO_MODEL);
+    const polled = await fetch(query, { headers: { "Authorization": "Bearer " + apiKey }, signal: AbortSignal.timeout(45000) });
+    const pollText = await polled.text();
+    let state;
+    try { state = JSON.parse(pollText); } catch { throw new Error("Agnes returned an invalid status response"); }
+    if (!polled.ok) throw new Error("Agnes status check failed (HTTP " + polled.status + ")");
+    const status = String(state.status || "").toLowerCase();
+    if (["completed", "complete", "success", "succeeded", "done"].includes(status)) {
+      const videoUrl = state.url || state.video_url || state.output?.url;
+      if (!videoUrl) throw new Error("Agnes completed but returned no video URL");
+      const parsed = new URL(videoUrl);
+      if (parsed.protocol !== "https:" || parsed.hostname !== "platform-outputs.agnes-ai.space") {
+        throw new Error("Agnes returned an unexpected video host");
+      }
+      return { videoUrl: parsed.href, durationSeconds: Number(state.seconds || seconds), engine: "Agnes AI Video 2.5 Flash" };
+    }
+    if (["failed", "error", "cancelled"].includes(status)) {
+      throw new Error("Agnes video generation failed: " + String(state.error?.message || state.error || "unknown error").slice(0, 220));
+    }
+  }
+  throw new Error("Agnes video generation timed out after 8 minutes");
+}
+
+function isAllowedGeneratedVideoUrl(parsed) {
+  return parsed.protocol === "https:" &&
+    (parsed.hostname.endsWith(".hf.space") || parsed.hostname === "platform-outputs.agnes-ai.space");
+}
+
 // Anonymous access to the public Hugging Face Gradio Space. Shared free GPU may be busy.
 app.post("/api/generate", async (req, res) => {
+  if (process.env.AGNES_API_KEY) {
+    try {
+      const promptAgnes = "Create an original high-quality 3D animated family-friendly Indian cartoon scene. " +
+        "Keep the same character identities: Bagadbillaa is a charming expressive cat and Mooshak is a brave clever mouse. " +
+        "Both characters should be visible together. " + prompt +
+        ". Cinematic 3D animation, expressive faces, smooth natural motion, vertical 9:16, no text, no watermark.";
+      const generated = await requestAgnesVideo(promptAgnes, { seconds: 8 });
+      console.log("Agnes generated video successfully:", generated.videoUrl.slice(0, 160));
+      return res.json({ ...generated, message: "Agnes AI से 8 सेकंड की 3D कार्टून क्लिप तैयार है।" });
+    } catch (agnesError) {
+      console.error("Agnes video engine failed:", agnesError?.message || agnesError);
+      return res.status(502).json({
+        code: "AGNES_VIDEO_FAILED",
+        error: "Agnes AI वीडियो अभी नहीं बना पाया: " + String(agnesError?.message || agnesError).slice(0, 220),
+        retryable: true
+      });
+    }
+  }
   const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
   if (!prompt) return res.status(400).json({ error: "कृपया वीडियो का विवरण लिखें।" });
   if (prompt.length > 1800) return res.status(400).json({ error: "कृपया 1800 अक्षरों से छोटा विवरण लिखें।" });
@@ -257,7 +341,7 @@ app.post("/api/download-ai-video", async (req, res) => {
   const videoUrl = typeof req.body?.videoUrl === "string" ? req.body.videoUrl : "";
   let parsed;
   try { parsed = new URL(videoUrl); } catch { return res.status(400).json({ error: "AI वीडियो लिंक सही नहीं है।" }); }
-  if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".hf.space")) {
+  if (!isAllowedGeneratedVideoUrl(parsed)) {
     return res.status(400).json({ error: "सुरक्षा कारणों से यह वीडियो स्रोत स्वीकार नहीं है।" });
   }
   try {
@@ -291,7 +375,7 @@ app.post("/api/stitch-ai-videos", async (req, res) => {
     for (let i = 0; i < urls.length; i++) {
       let parsed;
       try { parsed = new URL(urls[i]); } catch { throw new Error("क्लिप " + (i + 1) + " का लिंक सही नहीं है।"); }
-      if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".hf.space")) {
+      if (!isAllowedGeneratedVideoUrl(parsed)) {
         throw new Error("सुरक्षा कारणों से क्लिप " + (i + 1) + " का स्रोत स्वीकार नहीं है।");
       }
       const response = await fetch(parsed.href, { signal: AbortSignal.timeout(90000) });
@@ -356,6 +440,23 @@ app.post("/api/animate-image", async (req, res) => {
   if (!prompt) return res.status(400).json({ error: "तस्वीर में क्या होना चाहिए, उसका विवरण लिखें।" });
   if (!/^data:image\/(jpeg|png|webp);base64,/.test(imageData) || !["image/jpeg","image/png","image/webp"].includes(mimeType)) {
     return res.status(400).json({ error: "कृपया JPG, PNG या WEBP तस्वीर चुनें।" });
+  }
+  if (process.env.AGNES_API_KEY) {
+    try {
+      const generated = await requestAgnesVideo(
+        "Animate the uploaded reference image as an original cinematic 3D cartoon scene. Preserve the same subjects, colors, clothing and composition. " +
+        prompt + ". Natural smooth motion, vertical 9:16, family-friendly, no text, no watermark.",
+        { seconds: 8, imageData }
+      );
+      return res.json({ ...generated, message: "आपकी तस्वीर से Agnes AI ने 3D वीडियो क्लिप तैयार की।" });
+    } catch (agnesError) {
+      console.error("Agnes image-to-video failed:", agnesError?.message || agnesError);
+      return res.status(502).json({
+        code: "AGNES_IMAGE_VIDEO_FAILED",
+        error: "Agnes AI तस्वीर से वीडियो नहीं बना पाया: " + String(agnesError?.message || agnesError).slice(0, 220),
+        retryable: true
+      });
+    }
   }
   const base = "https://cbensimon-wan2-2-fp8da-aoti-preview2.hf.space";
   try {
