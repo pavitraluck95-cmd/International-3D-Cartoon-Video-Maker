@@ -188,6 +188,10 @@ function isAllowedGeneratedVideoUrl(parsed) {
 
 // Anonymous access to the public Hugging Face Gradio Space. Shared free GPU may be busy.
 app.post("/api/generate", async (req, res) => {
+  const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
+  if (!prompt) return res.status(400).json({ error: "कृपया वीडियो का विवरण लिखें।" });
+  if (prompt.length > 1800) return res.status(400).json({ error: "कृपया 1800 अक्षरों से छोटा विवरण लिखें।" });
+
   if (process.env.AGNES_API_KEY) {
     try {
       const promptAgnes = "Create an original high-quality 3D animated family-friendly Indian cartoon scene. " +
@@ -206,10 +210,6 @@ app.post("/api/generate", async (req, res) => {
       });
     }
   }
-  const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
-  if (!prompt) return res.status(400).json({ error: "कृपया वीडियो का विवरण लिखें।" });
-  if (prompt.length > 1800) return res.status(400).json({ error: "कृपया 1800 अक्षरों से छोटा विवरण लिखें।" });
-
   const base = "https://lightricks-ltx-video-distilled.hf.space";
   try {
     let completedData = null;
