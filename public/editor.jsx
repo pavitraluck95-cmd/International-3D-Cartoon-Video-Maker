@@ -298,9 +298,12 @@ function App() {
         narration = await makeHindiNarration(dialogueStory);
         if (typeof narration !== "string" || !narration.startsWith("data:audio/")) narration = "";
       } catch (voiceError) {
-        console.warn("Device Hindi TTS unavailable; continue with silent video fallback:", voiceError?.message);
-        setStatus("फोन की हिंदी आवाज़ उपलब्ध नहीं है। वीडियो बिना आवाज़ के बनाने की कोशिश जारी है…");
+        throw new Error("30 सेकंड की हिंदी आवाज़ तैयार नहीं हुई, इसलिए अधूरी/बिना आवाज़ वाली वीडियो सेव नहीं की जाएगी: " + (voiceError?.message || "हिंदी TTS उपलब्ध नहीं है।"));
       }
+      if (!narration || !narration.startsWith("data:audio/")) {
+        throw new Error("हिंदी आवाज़ नहीं मिली। बिना आवाज़ वाली वीडियो को तैयार नहीं बताया जाएगा।");
+      }
+      let totalGeneratedSeconds = 0;
       for (let i = 0; i < beats.length; i++) {
         setStatus("AI कहानी का दृश्य " + (i + 1) + "/5 बन रहा है… हर दृश्य लगभग 7 सेकंड का होगा।");
         let generated = null;
@@ -342,8 +345,12 @@ function App() {
           throw new Error("दृश्य " + (i + 1) + ": " + (data.error || "AI इंजन वीडियो नहीं बना पाया।"));
         }
         videoUrls.push(data.videoUrl);
+        totalGeneratedSeconds += Number(data.durationSeconds || 0);
       }
-      setStatus("पाँचों AI दृश्य बन गए। अब 9:16 Shorts MP4 जोड़ी जा रही है" + (narration ? " और आवाज़ लगाई जा रही है…" : " (बिना आवाज़)…"));
+      if (totalGeneratedSeconds < 30) {
+        throw new Error("मुफ़्त AI इंजन ने केवल " + totalGeneratedSeconds + " सेकंड के दृश्य बनाए। पूरे 30 सेकंड के लिए पर्याप्त AI फुटेज नहीं मिला; अधूरी वीडियो सेव नहीं की गई।");
+      }
+      setStatus("पाँचों AI दृश्य (कुल " + totalGeneratedSeconds + " सेकंड) बन गए। अब 9:16 Shorts MP4 और हिंदी आवाज़ जोड़ी जा रही है…");
       const joined = await fetch(API_BASE + "/api/stitch-ai-videos", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoUrls, narration })
@@ -355,9 +362,9 @@ function App() {
       const blob = await joined.blob();
       if (blob.size < 20000 || !blob.type.includes("video")) throw new Error("जुड़ी हुई AI वीडियो वैध MP4 नहीं है।");
       const filename = "international-ai-3d-story-" + Date.now() + ".mp4";
-      await saveVideoToLibrary(blob, filename, 35);
+      await saveVideoToLibrary(blob, filename, 30);
       await refreshSavedVideos();
-      setStatus("🎉 पाँच AI दृश्यों को जोड़कर लगभग 30 सेकंड की 9:16 Shorts MP4 Library में सेव हो गई है।");
+      setStatus("🎉 30 सेकंड की 9:16 AI Shorts MP4 हिंदी आवाज़ सहित ऐप की Library में सेव हो गई है।");
     } catch (error) {
       setStatus("AI वीडियो नहीं बन पाई: " + (error.message || "मुफ़्त साझा GPU व्यस्त हो सकता है।"));
     } finally {
