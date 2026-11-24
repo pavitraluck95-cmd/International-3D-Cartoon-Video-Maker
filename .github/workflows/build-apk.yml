@@ -47,7 +47,7 @@ jobs:
       - name: Add native Android Gallery saver
         run: |
           mkdir -p android/app/src/main/java/com/rl/aicartoon/moviestudio
-          cat > android/app/src/main/java/com/international3dcartoon/videomaker/MainActivity.java <<'JAVA'
+          cat > android/app/src/main/java/com/rl/aicartoon/moviestudio/MainActivity.java <<'JAVA'
           package com.rl.aicartoon.moviestudio;
 
           import android.content.ContentValues;
