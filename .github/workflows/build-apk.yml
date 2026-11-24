@@ -6,7 +6,7 @@ permissions:
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, ai-cartoon-movie-studio-v2]
     paths:
       - "package.json"
       - "capacitor.config.json"
@@ -35,11 +35,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Sync latest source before build
-        run: |
-          git fetch origin main
-          git rebase origin/main
-
       - name: Build web app
         run: npm run build
 
@@ -51,9 +46,9 @@ jobs:
 
       - name: Add native Android Gallery saver
         run: |
-          mkdir -p android/app/src/main/java/com/international3dcartoon/videomaker
+          mkdir -p android/app/src/main/java/com/rl/aicartoon/moviestudio
           cat > android/app/src/main/java/com/international3dcartoon/videomaker/MainActivity.java <<'JAVA'
-          package com.international3dcartoon.videomaker;
+          package com.rl.aicartoon.moviestudio;
 
           import android.content.ContentValues;
           import android.content.Intent;
