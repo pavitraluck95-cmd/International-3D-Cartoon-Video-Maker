@@ -120,11 +120,72 @@ async function requestLtx25Fallback(prompt) {
   return videoUrl;
 }
 
+// Optional authenticated Agnes Video 2.5 Flash engine. The key is server-only.
+async function requestAgnesVideo(prompt) {
+  const apiKey = process.env.AGNES_API_KEY;
+  if (!apiKey) throw new Error("Agnes API key is not configured on the server.");
+  const model = "agnes-video-2.5-flash";
+  const base = process.env.AGNES_BASE_URL || "https://apihub.agnes-ai.com";
+  const created = await fetch(base + "/v1/videos", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model, prompt, mode: "text", seconds: "7", size: "720P", aspect_ratio: "9:16", n: 1
+    }),
+    signal: AbortSignal.timeout(60000)
+  });
+  const createdText = await created.text();
+  let task;
+  try { task = JSON.parse(createdText); } catch { throw new Error("Agnes returned an invalid task response (HTTP " + created.status + ")."); }
+  if (!created.ok) throw new Error("Agnes video submission failed (HTTP " + created.status + "): " + String(task.message || task.error?.message || task.error || createdText).slice(0, 220));
+  const videoId = task.video_id || task.id;
+  if (!videoId) throw new Error("Agnes did not return a video_id.");
+  const deadline = Date.now() + 8 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    const pollUrl = base + "/agnesapi?video_id=" + encodeURIComponent(videoId) + "&model_name=" + encodeURIComponent(model);
+    const polled = await fetch(pollUrl, {
+      headers: { "Authorization": "Bearer " + apiKey, "Accept": "application/json" },
+      signal: AbortSignal.timeout(30000)
+    });
+    const pollText = await polled.text();
+    let state;
+    try { state = JSON.parse(pollText); } catch { throw new Error("Agnes returned an invalid video status (HTTP " + polled.status + ")."); }
+    if (!polled.ok) throw new Error("Agnes status request failed (HTTP " + polled.status + ").");
+    if (state.status === "failed") throw new Error("Agnes video generation failed: " + String(state.error || "unknown error").slice(0, 220));
+    if (state.status === "completed") {
+      const videoUrl = state.url || state.video_url;
+      if (!videoUrl) throw new Error("Agnes completed the task without a video URL.");
+      const parsed = new URL(videoUrl);
+      if (parsed.protocol !== "https:" || parsed.hostname !== "platform-outputs.agnes-ai.space") {
+        throw new Error("Agnes returned an unexpected video host.");
+      }
+      return { videoUrl: parsed.href, durationSeconds: Number(state.seconds || 7) };
+    }
+  }
+  throw new Error("Agnes video generation timed out while waiting for the shared queue.");
+}
+
+function isAllowedAiVideoHost(hostname) {
+  return hostname === "platform-outputs.agnes-ai.space" || hostname.endsWith(".hf.space");
+}
+
 // Anonymous access to the public Hugging Face Gradio Space. Shared free GPU may be busy.
 app.post("/api/generate", async (req, res) => {
   const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
   if (!prompt) return res.status(400).json({ error: "कृपया वीडियो का विवरण लिखें।" });
   if (prompt.length > 1800) return res.status(400).json({ error: "कृपया 1800 अक्षरों से छोटा विवरण लिखें।" });
+
+  if (process.env.AGNES_API_KEY) {
+    try {
+      const generated = await requestAgnesVideo(prompt);
+      console.log("Agnes video generated successfully:", generated.videoUrl.slice(0, 180));
+      return res.json({ ...generated, engine: "Agnes Video 2.5 Flash", message: "लगभग 7 सेकंड की 9:16 AI वीडियो तैयार है।" });
+    } catch (error) {
+      console.error("Agnes video generation failed:", error?.message || error);
+      return res.status(502).json({ code: "AGNES_VIDEO_FAILED", error: "AI वीडियो सेवा इस समय वीडियो नहीं बना पाई: " + String(error?.message || error).slice(0, 220), retryable: true });
+    }
+  }
 
   const base = "https://lightricks-ltx-video-distilled.hf.space";
   try {
@@ -257,7 +318,7 @@ app.post("/api/download-ai-video", async (req, res) => {
   const videoUrl = typeof req.body?.videoUrl === "string" ? req.body.videoUrl : "";
   let parsed;
   try { parsed = new URL(videoUrl); } catch { return res.status(400).json({ error: "AI वीडियो लिंक सही नहीं है।" }); }
-  if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".hf.space")) {
+  if (parsed.protocol !== "https:" || !isAllowedAiVideoHost(parsed.hostname)) {
     return res.status(400).json({ error: "सुरक्षा कारणों से यह वीडियो स्रोत स्वीकार नहीं है।" });
   }
   try {
@@ -291,7 +352,7 @@ app.post("/api/stitch-ai-videos", async (req, res) => {
     for (let i = 0; i < urls.length; i++) {
       let parsed;
       try { parsed = new URL(urls[i]); } catch { throw new Error("क्लिप " + (i + 1) + " का लिंक सही नहीं है।"); }
-      if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".hf.space")) {
+      if (parsed.protocol !== "https:" || !isAllowedAiVideoHost(parsed.hostname)) {
         throw new Error("सुरक्षा कारणों से क्लिप " + (i + 1) + " का स्रोत स्वीकार नहीं है।");
       }
       const response = await fetch(parsed.href, { signal: AbortSignal.timeout(90000) });
