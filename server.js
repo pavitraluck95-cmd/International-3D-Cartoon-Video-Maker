@@ -200,7 +200,7 @@ app.post("/api/generate", async (req, res) => {
     } catch (error) {
       const detail = String(error?.message || error);
       console.error("Agnes video generation failed:", detail);
-      if (/queue\\s+is\\s+full|queue_full|video queue full/i.test(detail)) {
+      if (/queue\s+is\s+full|queue_full|video queue full/i.test(detail)) {
         return res.status(429).json({
           code: "AGNES_QUEUE_FULL",
           error: "Agnes AI की साझा वीडियो कतार अभी भरी हुई है। यह APK या आपकी सेटिंग की गलती नहीं है। कृपया 2–3 मिनट रुककर फिर से कोशिश करें।",
