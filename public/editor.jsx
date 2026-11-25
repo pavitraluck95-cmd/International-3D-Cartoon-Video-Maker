@@ -319,7 +319,8 @@ function App() {
             data = await generated.json().catch(() => ({}));
             if (generated.ok && data.videoUrl) break;
             const message = String(data.error || "");
-            const quotaOrCapacity = /quota|exceeded|zero.?gpu|runs limit|limit.*gpu|credits/i.test(message);
+            const queueFull = data.code === "AGNES_QUEUE_FULL" || /queue\\s+is\\s+full|queue_full|video queue full/i.test(message);
+            const quotaOrCapacity = queueFull || /quota|exceeded|zero.?gpu|runs limit|limit.*gpu|credits/i.test(message);
             const temporary = [502, 503, 504, 408].includes(generated.status);
             if (attempt === 0 && temporary && !quotaOrCapacity) {
               setStatus("दृश्य " + (i + 1) + " में अस्थायी सर्वर रुकावट आई है। एक बार फिर कोशिश कर रहे हैं…");
