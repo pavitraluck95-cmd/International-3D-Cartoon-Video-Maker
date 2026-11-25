@@ -126,18 +126,34 @@ async function requestAgnesVideo(prompt) {
   if (!apiKey) throw new Error("Agnes API key is not configured on the server.");
   const model = "agnes-video-2.5-flash";
   const base = process.env.AGNES_BASE_URL || "https://apihub.agnes-ai.com";
-  const created = await fetch(base + "/v1/videos", {
-    method: "POST",
-    headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model, prompt, mode: "text", seconds: "7", size: "720P", aspect_ratio: "9:16", n: 1
-    }),
-    signal: AbortSignal.timeout(60000)
-  });
-  const createdText = await created.text();
-  let task;
-  try { task = JSON.parse(createdText); } catch { throw new Error("Agnes returned an invalid task response (HTTP " + created.status + ")."); }
-  if (!created.ok) throw new Error("Agnes video submission failed (HTTP " + created.status + "): " + String(task.message || task.error?.message || task.error || createdText).slice(0, 220));
+  // Agnes shared Flash queue can briefly reject submissions with HTTP 503.
+  // Retry queue-full only, with bounded backoff to avoid flooding the provider.
+  let created, createdText, task;
+  const retryDelaysMs = [20000, 40000];
+  for (let attempt = 0; attempt < 3; attempt++) {
+    created = await fetch(base + "/v1/videos", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model, prompt, mode: "text", seconds: "7", size: "720P", aspect_ratio: "9:16", n: 1
+      }),
+      signal: AbortSignal.timeout(60000)
+    });
+    createdText = await created.text();
+    try { task = JSON.parse(createdText); }
+    catch {
+      throw new Error("Agnes returned an invalid task response (HTTP " + created.status + ").");
+    }
+    if (created.ok) break;
+    const detail = String(task.message || task.error?.message || task.error || createdText);
+    const queueFull = created.status === 503 && /queue\s+is\s+full|queue_full|video queue full/i.test(detail);
+    if (!queueFull || attempt >= retryDelaysMs.length) {
+      throw new Error("Agnes video submission failed (HTTP " + created.status + "): " + detail.slice(0, 220));
+    }
+    const waitMs = retryDelaysMs[attempt];
+    console.warn("Agnes shared queue is full; retry " + (attempt + 2) + "/3 in " + (waitMs / 1000) + " seconds.");
+    await new Promise(resolve => setTimeout(resolve, waitMs));
+  }
   const videoId = task.video_id || task.id;
   if (!videoId) throw new Error("Agnes did not return a video_id.");
   const deadline = Date.now() + 8 * 60 * 1000;
