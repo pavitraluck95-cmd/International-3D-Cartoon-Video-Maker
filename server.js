@@ -198,8 +198,16 @@ app.post("/api/generate", async (req, res) => {
       console.log("Agnes video generated successfully:", generated.videoUrl.slice(0, 180));
       return res.json({ ...generated, engine: "Agnes Video 2.5 Flash", message: "लगभग 7 सेकंड की 9:16 AI वीडियो तैयार है।" });
     } catch (error) {
-      console.error("Agnes video generation failed:", error?.message || error);
-      return res.status(502).json({ code: "AGNES_VIDEO_FAILED", error: "AI वीडियो सेवा इस समय वीडियो नहीं बना पाई: " + String(error?.message || error).slice(0, 220), retryable: true });
+      const detail = String(error?.message || error);
+      console.error("Agnes video generation failed:", detail);
+      if (/queue\\s+is\\s+full|queue_full|video queue full/i.test(detail)) {
+        return res.status(429).json({
+          code: "AGNES_QUEUE_FULL",
+          error: "Agnes AI की साझा वीडियो कतार अभी भरी हुई है। यह APK या आपकी सेटिंग की गलती नहीं है। कृपया 2–3 मिनट रुककर फिर से कोशिश करें।",
+          retryable: false
+        });
+      }
+      return res.status(502).json({ code: "AGNES_VIDEO_FAILED", error: "AI वीडियो सेवा इस समय वीडियो नहीं बना पाई: " + detail.slice(0, 220), retryable: true });
     }
   }
 
