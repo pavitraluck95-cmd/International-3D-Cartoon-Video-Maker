@@ -201,11 +201,29 @@ app.post("/api/generate", async (req, res) => {
       const detail = String(error?.message || error);
       console.error("Agnes video generation failed:", detail);
       if (/queue\s+is\s+full|queue_full|video queue full/i.test(detail)) {
-        return res.status(429).json({
-          code: "AGNES_QUEUE_FULL",
-          error: "Agnes AI की साझा वीडियो कतार अभी भरी हुई है। यह APK या आपकी सेटिंग की गलती नहीं है। कृपया 2–3 मिनट रुककर फिर से कोशिश करें।",
-          retryable: false
-        });
+        // Try the anonymous free LTX-2.5 provider if Agnes rejects a full queue.
+        // Its current public Space produces a short 2-second clip, not a full Short.
+        try {
+          console.warn("Agnes queue is full; trying anonymous LTX-2.5 free fallback.");
+          const videoUrl = await requestLtx25Fallback(prompt);
+          console.log("LTX-2.5 fallback generated after Agnes queue-full:", videoUrl.slice(0, 180));
+          return res.json({
+            videoUrl, durationSeconds: 2, engine: "LTX-2.5 free fallback",
+            message: "Agnes कतार भरी थी; मुफ्त बैकअप इंजन से 2 सेकंड की क्लिप तैयार है।"
+          });
+        } catch (fallbackError) {
+          const fallbackDetail = String(fallbackError?.message || fallbackError);
+          console.error("Agnes and LTX-2.5 fallback both failed:", fallbackDetail);
+          const quotaWait = fallbackDetail.match(/Try again in\s+([0-9:]+)/i)?.[1];
+          const isQuota = /(?:exceeded your ZeroGPU quota|ZeroGPU runs limit|ZeroGPU quota)/i.test(fallbackDetail);
+          return res.status(isQuota ? 429 : 502).json({
+            code: isQuota ? "FREE_GPU_QUOTA_EXHAUSTED" : "ALL_VIDEO_ENGINES_UNAVAILABLE",
+            error: isQuota
+              ? "Agnes कतार भरी है और मुफ्त बैकअप की GPU सीमा भी पूरी है।" + (quotaWait ? " लगभग " + quotaWait + " बाद फिर कोशिश करें।" : " कुछ देर बाद फिर कोशिश करें।")
+              : "Agnes कतार भरी है और मुफ्त LTX बैकअप भी अभी उपलब्ध नहीं है। थोड़ी देर बाद फिर कोशिश करें।",
+            retryable: !isQuota
+          });
+        }
       }
       return res.status(502).json({ code: "AGNES_VIDEO_FAILED", error: "AI वीडियो सेवा इस समय वीडियो नहीं बना पाई: " + detail.slice(0, 220), retryable: true });
     }
