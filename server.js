@@ -200,7 +200,7 @@ app.post("/api/generate", async (req, res) => {
     } catch (error) {
       const detail = String(error?.message || error);
       console.error("Agnes video generation failed:", detail);
-      if (/queue\\s+is\\s+full|queue_full|video queue full/i.test(detail)) {
+      if (/queue\s+is\s+full|queue_full|video queue full/i.test(detail)) {
         // Try the anonymous free LTX-2.5 provider if Agnes rejects a full queue.
         // Its current public Space produces a short 2-second clip, not a full Short.
         try {
@@ -214,7 +214,7 @@ app.post("/api/generate", async (req, res) => {
         } catch (fallbackError) {
           const fallbackDetail = String(fallbackError?.message || fallbackError);
           console.error("Agnes and LTX-2.5 fallback both failed:", fallbackDetail);
-          const quotaWait = fallbackDetail.match(/Try again in\\s+([0-9:]+)/i)?.[1];
+          const quotaWait = fallbackDetail.match(/Try again in\s+([0-9:]+)/i)?.[1];
           const isQuota = /(?:exceeded your ZeroGPU quota|ZeroGPU runs limit|ZeroGPU quota)/i.test(fallbackDetail);
           return res.status(isQuota ? 429 : 502).json({
             code: isQuota ? "FREE_GPU_QUOTA_EXHAUSTED" : "ALL_VIDEO_ENGINES_UNAVAILABLE",
